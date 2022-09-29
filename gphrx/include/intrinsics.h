@@ -15,8 +15,6 @@ typedef uint64_t u64;
 
 typedef unsigned char byte;
 
-#endif
-
 // TODO: Request page size from the OS instead
 #define PAGE_SIZE 4096
 

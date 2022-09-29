@@ -4,35 +4,49 @@
 
 #include "assert.h"
 #include "debug.h"
-#include "dynarr.h"
+#include "dynarray.h"
 #include "intrinsics.h"
 
-typedef u8 GPHRX_ERROR
+typedef u8 GPHRX_ERROR;
 #define GPHRX_NO_ERROR 0
 #define GPHRX_FILE_IO_FAILURE 1
 
-// TODO: Create DynArray of node structs containing ID, pointer to node in adjacency matrix, and degree
-// TODO: Nodes are numberd with an ID. The nodes will be ordered in the matrix so they won't be in ID
-//       order, but can be referenced by ID in the hash table
-// TODO: Assign a padding to each node for when new nodes are added
-
+/**
+ * Compress Space Row formatted adjacency matrix stored with dynamic arrays
+ */
 typedef struct {
-    u64 id;
-    u64 degree;
-    byte *matrix_pos;
-    u16 padding;
-} GphrxNode;
+    DynArray matrix_col_idx_list;
+    DynArray matrix_row_idx_list; 
+} CsrAdjMatrix;
 
+/**
+ * Metadata and representation of a graph
+ */
 typedef struct {
-    DynArray adjacency_matrix;
-    DynArray node_list;
-    u64 dimension;
-} GraphRox;
+    u64 node_count;
+    CsrAdjMatrix adjacency_matrix;
+} GphrxGraph;
 
-GraphRox new_gphrx();
+/**
+ * Creates an empty GraphRox graph.
+ */
+GphrxGraph new_gphrx();
 
-GraphRox gphrx_load_from_file(char *file_path);
-void gphrx_save(GraphRox* graph, char *file_path);
+/**
+ * Generates an approximation of a graph at a given depth in the bit-order tree representation of the graph.
+ * This is where the magic of GraphRox happens.
+ */
+GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth);
+
+/**
+ * Loads a graph from a GraphRox file
+ */
+GphrxGraph gphrx_load_from_file(char *file_path);
+
+/**
+ * Saves a GraphRox graph to a file
+ */
+void gphrx_save(GphrxGraph *graph, char *file_path);
 
 #define __GPHRX_H
 #endif

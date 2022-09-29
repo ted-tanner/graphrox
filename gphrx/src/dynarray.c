@@ -5,12 +5,8 @@ void dynarr_shrink(DynArray *arr)
     size_t new_capacity = arr->size * arr->element_size;
     byte *new_arr = realloc(arr->arr, new_capacity);
 
-    if (!new_arr)
-    {
-        fprintf(stderr, "REALLOC FAILURE (%s:%d)", __FILE__, __LINE__);
-        abort();
-    }
-
+    assert(new_arr != 0, "realloc failue");
+    
     arr->arr = new_arr;
     arr->capacity = new_capacity;
 }
@@ -30,11 +26,7 @@ void dynarr_push_multiple(DynArray *arr, void *item_arr, size_t count)
 
         byte *new_arr = realloc(arr->arr, new_capacity * arr->element_size);
 
-        if (!new_arr)
-        {
-            fprintf(stderr, "REALLOC FAILURE (%s:%d)", __FILE__, __LINE__);
-            abort();
-        }
+        assert(new_arr != 0, "realloc failue");
 
         arr->arr = new_arr;
         arr->capacity = new_capacity;
@@ -48,11 +40,7 @@ DynArray _create_dynarr(size_t start_capacity, size_t element_size)
 {
     byte *arr = malloc(element_size * start_capacity);
 
-    if (!arr)
-    {
-        fprintf(stderr, "MALLOC FAILURE (%s:%d)", __FILE__, __LINE__);
-        abort();
-    }
+    assert(arr != 0, "malloc failure");
 
     DynArray vec = {
         .capacity = start_capacity,
@@ -60,7 +48,7 @@ DynArray _create_dynarr(size_t start_capacity, size_t element_size)
         .element_size = element_size,
         .arr = arr,
     };
-
+    
     return vec;
 }
 
@@ -70,11 +58,7 @@ void _dynarr_push(DynArray *arr, void *item)
     {
         byte *new_arr = realloc(arr->arr, arr->capacity * arr->element_size * 2);
 
-        if (!new_arr)
-        {
-            fprintf(stderr, "REALLOC FAILURE (%s:%d)", __FILE__, __LINE__);
-            abort();
-        }
+        assert(new_arr != 0, "realloc failue");
 
         arr->arr = new_arr;
         arr->capacity *= 2;

@@ -3,6 +3,7 @@
 #ifdef DEBUG_MODE
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifdef _MSC_VER
 #define _FUNC_ __FUNCSIG__

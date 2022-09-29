@@ -1,9 +1,6 @@
 #ifndef __DYN_ARRAY_H
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "assert.h"
@@ -16,7 +13,8 @@ typedef struct _dynarr {
     byte* arr;
 } DynArray;
 
-#define new_dynarr(start_capacity, type) _create_dynarr(start_capacity, sizeof(type))
+#define new_dynarr(type) _create_dynarr(1, sizeof(type))
+#define new_dynarr_with_size(start_capacity, type) _create_dynarr(start_capacity, sizeof(type))
 #define free_dynarr(arr_ptr) free((arr_ptr)->arr)
 #define dynarr_push(arr_ptr, item) _dynarr_push((arr_ptr), &(item))
 #define dynarr_get(arr_ptr, pos, type) (*((type*) ((arr_ptr)->arr + (pos) * (arr_ptr)->element_size)))
