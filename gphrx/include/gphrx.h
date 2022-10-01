@@ -43,9 +43,21 @@ GphrxGraph new_undirected_gphrx();
 GphrxGraph new_directed_gphrx();
 
 /**
- * Frees the memory used by the graph.
+ * Frees the memory used by a given graph.
  */
 void free_gphrx(GphrxGraph *graph);
+
+/**
+ * Frees up excess memory used by the lists that describe the graph. This can substantially reduce memory
+ * usage for graphs that are static (meaning edges and vertices are no longer being added), but can make
+ * subsequent modifications to the graph slower.
+ */
+void gphrx_shrink(GphrxGraph *graph);
+
+/**
+ * Adds a vertex to the given graph.
+ */
+void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count);
 
 /**
  * Removes a vertex from the given graph.

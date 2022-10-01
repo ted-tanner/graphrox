@@ -61,6 +61,17 @@ void dynarr_push_multiple(DynamicArray *arr, void *item_arr, size_t count)
     arr->size += count;
 }
 
+void dynarr_remove_at(DynamicArray *arr, size_t idx)
+{
+    size_t real_idx = idx * arr->element_size;
+    
+    memmove(arr->arr + real_idx,
+            arr->arr + real_idx + arr->element_size,
+            (arr->size - idx - 1) * arr->element_size);
+    
+    --arr->size;
+}
+
 DynamicArray _create_dynarr(size_t start_capacity, size_t element_size)
 {
     byte *arr = malloc(element_size * start_capacity);

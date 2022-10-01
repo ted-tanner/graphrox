@@ -29,6 +29,7 @@ void dynarr_expand(DynamicArray *arr, size_t desired_capacity);
 void dynarr_expand_and_zero(DynamicArray *arr, size_t desired_size);
 
 void dynarr_push_multiple(DynamicArray *arr, void *item_arr, size_t count);
+void dynarr_remove_at(DynamicArray *arr, size_t idx);
 
 DynamicArray _create_dynarr(size_t start_capacity, size_t element_size);
 void _dynarr_push_at(DynamicArray *arr, void *item_ptr, size_t idx);
