@@ -18,7 +18,9 @@ typedef unsigned char byte;
 // TODO: Request page size from the OS instead
 #define PAGE_SIZE 4096
 
-#define mod_pow_2(operand1, operand2) ((operand1) & ((operand2) - 1))
+#define fast_mod_pow_2(operand1, operand2) ((operand1) & ((operand2) - 1))
+#define fast_mult_pow_2(operand, pow) ((operand) << (pow)) 
+#define fast_div_pow_2(operand, pow) ((operand) >> (pow))
 
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline

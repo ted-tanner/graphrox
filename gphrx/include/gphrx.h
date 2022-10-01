@@ -8,6 +8,10 @@
 #include "dynarray.h"
 #include "intrinsics.h"
 
+/** Error codes */
+#define GPHRX_NO_ERROR 0
+#define GPHRX_ERROR_NOT_FOUND 1
+
 // TODO: Create separate struct and functions for weighted graphs. The CSR adjacency matrix will
 //       be fundamentally different for weighted graphs functions for adding vertices and edges
 //       will accept a weight as a parameter
@@ -16,16 +20,15 @@
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays
  */
 typedef struct {
-    DynArray matrix_col_idx_list;
-    DynArray matrix_row_idx_list; 
+    DynamicArray matrix_col_idx_list;
+    DynamicArray matrix_row_idx_list; 
 } CsrAdjMatrix;
 
 /**
  * Metadata and representation of a graph
  */
 typedef struct {
-    bool is_directed;
-    u64 node_count;
+    bool is_undirected;
     CsrAdjMatrix adjacency_matrix;
 } GphrxGraph;
 
@@ -40,9 +43,9 @@ GphrxGraph new_undirected_gphrx();
 GphrxGraph new_directed_gphrx();
 
 /**
- * Add a vertex to the given graph.
+ * Frees the memory used by the graph.
  */
-void gphrx_add_vertex(GphrxGraph *graph, u64 *adjacent_vertices);
+void free_gphrx(GphrxGraph *graph);
 
 /**
  * Removes a vertex from the given graph.
