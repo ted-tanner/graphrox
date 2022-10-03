@@ -20,8 +20,8 @@
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays
  */
 typedef struct {
-    DynamicArray matrix_col_idx_list;
-    DynamicArray matrix_row_idx_list; 
+    DynamicArrayU64 matrix_col_idx_list;
+    DynamicArrayU64 matrix_row_idx_list; 
 } CsrAdjMatrix;
 
 /**

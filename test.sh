@@ -1,4 +1,9 @@
 source .env
+
+FLAGS='-O0 -g -DDEBUG_MODE'
+WARNINGS='-Winline -Wno-invalid-noreturn'
+COMPILER=clang
+
 OUTPUT_LOC="$OUTPUT_DIR/test.out"
 BUILD_SPECIFIC_FILES='./gphrx/test/*.c'
 TEST_INCLUDE_DIR='./gphrx/test'
