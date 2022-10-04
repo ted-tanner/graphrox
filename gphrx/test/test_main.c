@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "dynarray.h"
 #include "gphrx.h"
 #include "intrinsics.h"
 #include "test.h"
@@ -28,7 +29,7 @@ int main(int argc, char **argv)
     u32 test_set_count = 0;
     // TODO: Test DynamicArray functions
     // TODO: Test GphrxGraph functions
-    // test_sets[test_set_count++] = gphrx_h_register_tests();
+    test_sets[test_set_count++] = dynarray_h_register_tests();
 
     printf("Running tests...\n");
 

@@ -3,6 +3,11 @@
 #include <setjmp.h>
 #include <stdlib.h>
 
+// Add some common includes for the testsn
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "intrinsics.h"
 
 #define TEST_NAME_MAX_LEN 256
