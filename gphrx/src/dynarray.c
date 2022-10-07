@@ -80,7 +80,7 @@ void dynarr_u64_remove_at(DynamicArrayU64 *arr, size_t idx)
 
 void dynarr_u64_remove_multiple_at(DynamicArrayU64 *arr, size_t start_idx, size_t count)
 {
-    assert(arr->size > start_idx + count, "Invalid array index or count");
+    assert(arr->size >= start_idx + count, "Invalid array index or count");
     memmove(arr->arr + start_idx,
             arr->arr + start_idx + count,
             (arr->size - start_idx - count) * sizeof(u64));

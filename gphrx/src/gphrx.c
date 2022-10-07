@@ -77,19 +77,19 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
     u64 curr_idx_temp = curr_idx;
     for (; curr_idx >= 0; --curr_idx)
     {
-        if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
-            return curr_idx;
         if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id)
             break;
+        if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
+            return curr_idx;
     }
 
     curr_idx = curr_idx_temp;
     for (; curr_idx < row_arr->size; ++curr_idx)
     {
-        if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
-            return curr_idx;
         if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id)
             break;
+        if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
+            return curr_idx;
     }
 
     return curr_idx;
@@ -103,28 +103,28 @@ void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 v
 
 void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
 {
-    // TOOD: Need to be able to remove all of the edges for a vertex as well as single edges
-    // TODO: TEST this right here ^
-    
     size_t vertex_idx = index_of_edge(&graph->adjacency_matrix.matrix_col_idx_list, vertex_id);
-    size_t first_edge_idx = vertex_id;
-    size_t last_edge_idx = vertex_id;
+    size_t first_edge_idx = vertex_idx;
+    size_t last_edge_idx = vertex_idx;
 
     while (first_edge_idx >= 1 &&
            dynarr_u64_get(&graph->adjacency_matrix.matrix_col_idx_list, first_edge_idx - 1) == vertex_id)
         --first_edge_idx;
 
-    while (last_edge_idx < graph->adjacency_matrix.matrix_col_idx_list.size &&
+    while (last_edge_idx < graph->adjacency_matrix.matrix_col_idx_list.size - 1 &&
            dynarr_u64_get(&graph->adjacency_matrix.matrix_col_idx_list, last_edge_idx + 1) == vertex_id)
         ++last_edge_idx;
 
-    dynarr_u64_remove_multiple_at(&graph->adjacency_matrix.matrix_col_idx_list,
-                                  first_edge_idx,
-                                  last_edge_idx - first_edge_idx + 1);
+    if (first_edge_idx != graph->adjacency_matrix.matrix_col_idx_list.size)
+    {
+        dynarr_u64_remove_multiple_at(&graph->adjacency_matrix.matrix_col_idx_list,
+                                      first_edge_idx,
+                                      last_edge_idx + 1 - first_edge_idx);
 
-    dynarr_u64_remove_multiple_at(&graph->adjacency_matrix.matrix_row_idx_list,
-                                  first_edge_idx,
-                                  last_edge_idx - first_edge_idx + 1);
+        dynarr_u64_remove_multiple_at(&graph->adjacency_matrix.matrix_row_idx_list,
+                                      first_edge_idx,
+                                      last_edge_idx + 1 - first_edge_idx);
+    }
 
     for (size_t i = 0; i < graph->adjacency_matrix.matrix_row_idx_list.size; ++i)
     {
@@ -132,6 +132,7 @@ void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
         {
             dynarr_u64_remove_at(&graph->adjacency_matrix.matrix_col_idx_list, i);
             dynarr_u64_remove_at(&graph->adjacency_matrix.matrix_row_idx_list, i);
+            --i; // The rest of the array has been shifted over, so must revisit same i to avoid skipping 
         }
     }
 
@@ -268,11 +269,12 @@ static TEST_RESULT test_gphrx_add_vertex()
     GphrxGraph undirected_graph = new_undirected_gphrx();
     
     gphrx_add_edge(&undirected_graph, 1, 1000);
-    gphrx_add_vertex(&undirected_graph, 7, to_edges, 5);
+    gphrx_add_vertex(&undirected_graph, 7, to_edges, 5);    
     gphrx_add_edge(&undirected_graph, 500, 1001);
+    gphrx_add_edge(&undirected_graph, 500, 7);    
     
-    assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.size == 14, "Incorrect adjacency matrix");
-    assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.size == 14, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.size == 16, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.size == 16, "Incorrect adjacency matrix");
     
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 0) == 1,
            "Incorrect adjacency matrix");
@@ -290,17 +292,21 @@ static TEST_RESULT test_gphrx_add_vertex()
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 7) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 8) == 9,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 8) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 9) == 20,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 9) == 9,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 10) == 100,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 10) == 20,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 11) == 500,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 11) == 100,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 12) == 1000,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 12) == 500,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 13) == 1001,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 13) == 500,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 14) == 1000,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 15) == 1001,
            "Incorrect adjacency matrix");
 
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 0) == 1000,
@@ -319,27 +325,32 @@ static TEST_RESULT test_gphrx_add_vertex()
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 7) == 9,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 8) == 7,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 8) == 500,
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 9) == 7,
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 10) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 11) == 1001,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 11) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 12) == 1,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 12) == 1001,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 13) == 500,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 13) == 7,
            "Incorrect adjacency matrix");
-
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 14) == 1,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 15) == 500,
+           "Incorrect adjacency matrix");
+    
     GphrxGraph directed_graph = new_directed_gphrx();
         
     gphrx_add_edge(&directed_graph, 1, 1000);
     gphrx_add_vertex(&directed_graph, 7, to_edges, 5);
     gphrx_add_edge(&directed_graph, 500, 1001);
+    gphrx_add_edge(&directed_graph, 500, 7);
     
-    assert(directed_graph.adjacency_matrix.matrix_col_idx_list.size == 7, "Incorrect adjacency matrix");
-    assert(directed_graph.adjacency_matrix.matrix_row_idx_list.size == 7, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.matrix_col_idx_list.size == 8, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.matrix_row_idx_list.size == 8, "Incorrect adjacency matrix");
     
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_col_idx_list, 0) == 1,
            "Incorrect adjacency matrix");
@@ -354,6 +365,8 @@ static TEST_RESULT test_gphrx_add_vertex()
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_col_idx_list, 5) == 7,
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_col_idx_list, 6) == 500,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_col_idx_list, 7) == 500,
            "Incorrect adjacency matrix");
   
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_row_idx_list, 0) == 1000,
@@ -370,6 +383,8 @@ static TEST_RESULT test_gphrx_add_vertex()
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_row_idx_list, 6) == 1001,
            "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_row_idx_list, 7) == 7,
+           "Incorrect adjacency matrix");
 
     free_gphrx(&undirected_graph);
     free_gphrx(&directed_graph);
@@ -377,11 +392,104 @@ static TEST_RESULT test_gphrx_add_vertex()
     return TEST_PASS;
 }
 
-// TODO
-// static TEST_RESULT test_gphrx_remove_vertex()
-// {
-//     return TEST_PASS;
-// }
+static TEST_RESULT test_gphrx_remove_vertex()
+{
+    u64 to_edges[] = {3, 2, 100, 20, 9};
+    
+    GphrxGraph undirected_graph = new_undirected_gphrx();
+    
+    gphrx_add_edge(&undirected_graph, 1, 1000);
+    gphrx_add_vertex(&undirected_graph, 7, to_edges, 5);    
+    gphrx_add_edge(&undirected_graph, 500, 1001);
+    gphrx_add_edge(&undirected_graph, 500, 7);    
+    
+    assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.size == 16, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.size == 16, "Incorrect adjacency matrix");
+
+    gphrx_remove_vertex(&undirected_graph, 7);
+
+    assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.size == 4, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.size == 4, "Incorrect adjacency matrix");
+    
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 0) == 1,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 1) == 500,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 2) == 1000,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 3) == 1001,
+           "Incorrect adjacency matrix");
+
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 0) == 1000,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 1) == 1001,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 2) == 1,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 3) == 500,
+           "Incorrect adjacency matrix");
+    
+    gphrx_remove_vertex(&undirected_graph, 1000);
+
+    assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.size == 2, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.size == 2, "Incorrect adjacency matrix");
+
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 0) == 500,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_col_idx_list, 1) == 1001,
+           "Incorrect adjacency matrix");
+
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 0) == 1001,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.matrix_row_idx_list, 1) == 500,
+           "Incorrect adjacency matrix");
+    
+    GphrxGraph directed_graph = new_directed_gphrx();
+        
+    gphrx_add_edge(&directed_graph, 1, 1000);
+    gphrx_add_vertex(&directed_graph, 7, to_edges, 5);
+    gphrx_add_edge(&directed_graph, 500, 1001);
+    gphrx_add_edge(&directed_graph, 500, 7);
+    
+    assert(directed_graph.adjacency_matrix.matrix_col_idx_list.size == 8, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.matrix_row_idx_list.size == 8, "Incorrect adjacency matrix");
+
+    gphrx_remove_vertex(&directed_graph, 7);
+
+    assert(directed_graph.adjacency_matrix.matrix_col_idx_list.size == 2, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.matrix_row_idx_list.size == 2, "Incorrect adjacency matrix");
+    
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_col_idx_list, 0) == 1,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_col_idx_list, 1) == 500,
+           "Incorrect adjacency matrix");
+
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_row_idx_list, 0) == 1000,
+           "Incorrect adjacency matrix");
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_row_idx_list, 1) == 1001,
+           "Incorrect adjacency matrix");
+
+    gphrx_remove_vertex(&directed_graph, 1000);
+
+    assert(directed_graph.adjacency_matrix.matrix_col_idx_list.size == 1, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.matrix_row_idx_list.size == 1, "Incorrect adjacency matrix");
+
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_col_idx_list, 0) == 500,
+           "Incorrect adjacency matrix");
+
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.matrix_row_idx_list, 0) == 1001,
+           "Incorrect adjacency matrix");
+
+    gphrx_remove_vertex(&directed_graph, 500);
+
+    assert(directed_graph.adjacency_matrix.matrix_col_idx_list.size == 0, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.matrix_row_idx_list.size == 0, "Incorrect adjacency matrix");
+
+    free_gphrx(&undirected_graph);
+    free_gphrx(&directed_graph);
+    
+    return TEST_PASS;
+}
 
 static TEST_RESULT test_gphrx_add_edge()
 {
@@ -528,7 +636,7 @@ ModuleTestSet gphrx_h_register_tests()
     register_test(&set, test_free_gphrx);
     register_test(&set, test_gphrx_shrink);
     register_test(&set, test_gphrx_add_vertex);
-    // register_test(&set, test_gphrx_remove_vertex);
+    register_test(&set, test_gphrx_remove_vertex);
     register_test(&set, test_gphrx_add_edge);
     register_test(&set, test_gphrx_remove_edge);
 
