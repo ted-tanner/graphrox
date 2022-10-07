@@ -4,9 +4,10 @@
 #include <stdio.h>
 
 #include "assert.h"
-#include "debug.h"
 #include "dynarray.h"
 #include "intrinsics.h"
+
+typedef u8 GphrxErrorCode;
 
 /** Error codes */
 #define GPHRX_NO_ERROR 0
@@ -29,6 +30,7 @@ typedef struct {
  */
 typedef struct {
     bool is_undirected;
+    u64 highest_vertex_id;
     CsrAdjMatrix adjacency_matrix;
 } GphrxGraph;
 
@@ -74,14 +76,25 @@ void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
  * Removes a link between two vertices. The "from" and "to" qualifiers on parameter names are only
  * significant when the graph is directed.
  */
-void gphrx_delete_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
 
+// TODO: Instead of depth as param, do height from bottom (perhaps call it compression_level or compression_power?)
 /**
  * Generates an approximation of a graph at a given depth in the bit-order tree representation of the graph
  * and a threshold of what percentage of edges must exist in a segment of the adjacency matrix for the
  * segment to be represented in the approximation. This is where the magic of GraphRox happens.
  */
 GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
+
+
+#ifdef TEST_MODE
+
+#include "test.h"
+
+ModuleTestSet gphrx_h_register_tests();
+
+#endif
+
 
 #define __GPHRX_H
 #endif

@@ -30,6 +30,7 @@ void dynarr_u64_grow_and_zero(DynamicArrayU64 *arr, size_t desired_size);
 
 void dynarr_u64_push_multiple(DynamicArrayU64 *arr, u64 *item_arr, size_t count);
 void dynarr_u64_remove_at(DynamicArrayU64 *arr, size_t idx);
+void dynarr_u64_remove_multiple_at(DynamicArrayU64 *arr, size_t start_idx, size_t count);
 
 void _dynarr_u64_push_at(DynamicArrayU64 *arr, u64 item, size_t idx);
 

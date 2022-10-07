@@ -47,7 +47,7 @@ void dynarr_u64_grow_and_zero(DynamicArrayU64* arr, size_t desired_size)
     dynarr_u64_expand(arr, desired_size);
     
     size_t delta = desired_size - arr->size;
-    memset((void*) (arr->arr + arr->size), 0, delta);
+    memset(arr->arr + arr->size, 0, delta);
     
     arr->size = desired_size;
 }
@@ -67,21 +67,30 @@ void dynarr_u64_push_multiple(DynamicArrayU64 *arr, u64 *item_arr, size_t count)
         arr->capacity = new_capacity;
     }
 
-    memcpy((void*) (arr->arr + arr->size), item_arr, count * sizeof(u64));
+    memcpy(arr->arr + arr->size, item_arr, count * sizeof(u64));
     arr->size += count;
 }
 
 void dynarr_u64_remove_at(DynamicArrayU64 *arr, size_t idx)
 {
-    memmove((void*) (arr->arr + idx),
-            (void*) (arr->arr + idx + 1),
-            (arr->size - idx - 1) * sizeof(u64));
-    
+    assert(arr->size > idx, "Invalid array index");
+    memmove(arr->arr + idx, arr->arr + idx + 1, (arr->size - idx - 1) * sizeof(u64));
     --arr->size;
+}
+
+void dynarr_u64_remove_multiple_at(DynamicArrayU64 *arr, size_t start_idx, size_t count)
+{
+    assert(arr->size > start_idx + count, "Invalid array index or count");
+    memmove(arr->arr + start_idx,
+            arr->arr + start_idx + count,
+            (arr->size - start_idx - count) * sizeof(u64));
+    arr->size -= count;
 }
 
 void _dynarr_u64_push_at(DynamicArrayU64 *arr, u64 item, size_t idx)
 {
+    assert(arr->size >= idx, "Invalid array index");
+    
     if (arr->size == arr->capacity)
     {
         u64 *new_arr = realloc(arr->arr, arr->capacity * sizeof(u64) * 2);
@@ -95,7 +104,7 @@ void _dynarr_u64_push_at(DynamicArrayU64 *arr, u64 item, size_t idx)
     u64 *location = arr->arr + idx;
     
     if (idx != arr->size)
-        memmove((void*) (location + 1), (void*) location, (arr->size - idx) * sizeof(u64));
+        memmove(location + 1, location, (arr->size - idx) * sizeof(u64));
 
     arr->arr[idx] = item;
     ++arr->size;
@@ -355,6 +364,38 @@ static TEST_RESULT test_dynarr_u64_remove_at() {
     assert(arr.arr[0] == 41, "Incorrect value in array");
     assert(arr.arr[1] == 2, "Incorrect value in array");
     assert(arr.arr[2] == 4, "Incorrect value in array");
+
+    free_dynarr_u64(&arr);
+
+    return TEST_PASS;
+}
+
+static TEST_RESULT test_dynarr_u64_remove_multiple_at() {
+    DynamicArrayU64 arr = new_dynarr_u64();
+
+    dynarr_u64_push(&arr, 0);
+    dynarr_u64_push(&arr, 1);
+    dynarr_u64_push(&arr, 2);
+    dynarr_u64_push(&arr, 3);
+    dynarr_u64_push(&arr, 4);
+    dynarr_u64_push(&arr, 5);
+    dynarr_u64_push(&arr, 6);
+    dynarr_u64_push(&arr, 7);
+    dynarr_u64_push(&arr, 8);
+    dynarr_u64_push(&arr, 9);
+
+    assert(arr.size == 10, "Incorrect array size");
+
+    dynarr_u64_remove_multiple_at(&arr, 3, 4);
+
+    assert(arr.size == 6, "Incorrect array size");
+
+    assert(arr.arr[0] == 0, "Incorrect value in array");
+    assert(arr.arr[1] == 1, "Incorrect value in array");
+    assert(arr.arr[2] == 2, "Incorrect value in array");
+    assert(arr.arr[3] == 7, "Incorrect value in array");
+    assert(arr.arr[4] == 8, "Incorrect value in array");
+    assert(arr.arr[5] == 9, "Incorrect value in array");
 
     free_dynarr_u64(&arr);
 
