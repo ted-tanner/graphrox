@@ -2,23 +2,39 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "assert.h"
 #include "dynarray.h"
 #include "intrinsics.h"
 
-typedef u8 GphrxErrorCode;
 
 /** Error codes */
+typedef u8 GphrxErrorCode;
+
 #define GPHRX_NO_ERROR 0
 #define GPHRX_ERROR_NOT_FOUND 1
+#define GPHRX_ERROR_INVALID_FORMAT 2
 
-// TODO: Create separate struct and functions for weighted graphs. The CSR adjacency matrix will
-//       be fundamentally different for weighted graphs functions for adding vertices and edges
-//       will accept a weight as a parameter
 
 /**
- * Compress Space Row formatted adjacency matrix stored with dynamic arrays
+ * Header for byte array representation of a GphrxGraph.
+ */
+#define GPHRX_HEADER_MAGIC_NUMBER 0x7AE71FFD
+#define GPHRX_BYTE_ARRAY_VERSION 1
+
+typedef struct {
+    u32 magic_number;
+    u32 version;
+    u64 highest_vertex_id;
+    u64 adjacency_matrix_dimension;
+    u8 is_undirected;
+    u8 is_weighted;
+} GphrxByteArrayHeader;
+
+
+/**
+ * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
 typedef struct {
     DynamicArrayU64 matrix_col_idx_list;
@@ -26,13 +42,14 @@ typedef struct {
 } CsrAdjMatrix;
 
 /**
- * Metadata and representation of a graph
+ * Metadata and representation of a graph.
  */
 typedef struct {
     bool is_undirected;
     u64 highest_vertex_id;
     CsrAdjMatrix adjacency_matrix;
 } GphrxGraph;
+
 
 /**
  * Creates an empty undirected GraphRox graph.
@@ -85,6 +102,16 @@ GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_v
  * segment to be represented in the approximation. This is where the magic of GraphRox happens.
  */
 GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
+
+/**
+ * Converts the given GphrxGraph to a big-endian byte array representation.
+ */
+byte *gphrx_to_byte_array(GphrxGraph *graph);
+
+/**
+ * Converts the given byte array from big-endian byte array representation of a GphrxGraph to a GphrxGraph.
+ */
+GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error);
 
 
 #ifdef TEST_MODE

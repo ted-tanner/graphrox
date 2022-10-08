@@ -196,6 +196,81 @@ GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_v
 
 GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
 
+byte *gphrx_to_byte_array(GphrxGraph *graph)
+{
+    GphrxByteArrayHeader header = {
+        .magic_number = GPHRX_HEADER_MAGIC_NUMBER,
+        .version = GPHRX_BYTE_ARRAY_VERSION,
+        .highest_vertex_id = graph->highest_vertex_id,
+        .adjacency_matrix_dimension = (u64) graph->adjacency_matrix.matrix_col_idx_list.size,
+        .is_undirected = graph->is_undirected,
+        .is_weighted = false,
+    };
+    
+    size_t buffer_size = 2 * graph->adjacency_matrix.matrix_col_idx_list.size * sizeof(u64)
+        + sizeof(header);
+
+    byte *buffer = malloc(buffer_size);
+    size_t pos = 0;
+
+    assert(buffer != 0, "malloc failure");
+
+    if (is_system_big_endian())
+    {
+        memcpy(buffer, &header, sizeof(header));
+        pos += sizeof(header);
+
+        memcpy(buffer + pos,
+               graph->adjacency_matrix.matrix_col_idx_list.arr,
+               sizeof(u64) * graph->adjacency_matrix.matrix_col_idx_list.size);
+
+        pos += sizeof(u64) * graph->adjacency_matrix.matrix_col_idx_list.size;
+
+        memcpy(buffer + pos,
+               graph->adjacency_matrix.matrix_row_idx_list.arr,
+               sizeof(u64) * graph->adjacency_matrix.matrix_row_idx_list.size);
+    }
+    else
+    {
+        u32 temp_u32 = u32_reverse_bits(GPHRX_HEADER_MAGIC_NUMBER);
+        memcpy(buffer + pos, &temp_u32, sizeof(u32));
+        pos += sizeof(u32);
+
+        temp_u32 = u32_reverse_bits(GPHRX_BYTE_ARRAY_VERSION);
+        memcpy(buffer + pos, &temp_u32, sizeof(u32));
+        pos += sizeof(u32);
+
+        u64 temp_u64 = u64_reverse_bits(graph->highest_vertex_id);
+        memcpy(buffer + pos, &temp_u64, sizeof(u64));
+        pos += sizeof(u64);
+
+        temp_u64 = u64_reverse_bits((u64) graph->adjacency_matrix.matrix_col_idx_list.size);
+        memcpy(buffer + pos, &temp_u64, sizeof(u64));
+        pos += sizeof(u64);
+
+        memcpy(buffer + pos, &graph->is_undirected, sizeof(u8));
+        pos += sizeof(u8);
+
+        u8 temp_u8 = (u8) false;
+        memcpy(buffer + pos, &temp_u8, sizeof(u8));
+        pos += sizeof(u8);
+        
+        for (size_t i = 0; i < graph->adjacency_matrix.matrix_col_idx_list.size; ++i, pos += sizeof(u64))
+        {
+            temp_u64 = u64_reverse_bits(graph->adjacency_matrix.matrix_col_idx_list.arr[i]);
+            memcpy(buffer + pos, &temp_u64, sizeof(u64));
+        }
+
+        for (size_t i = 0; i < graph->adjacency_matrix.matrix_row_idx_list.size; ++i, pos += sizeof(u64))
+        {
+            temp_u64 = u64_reverse_bits(graph->adjacency_matrix.matrix_row_idx_list.arr[i]);
+            memcpy(buffer + pos, &temp_u64, sizeof(u64));
+        }
+    }
+
+    return buffer;
+}
+
 
 #ifdef TEST_MODE
 

@@ -29,6 +29,11 @@ typedef unsigned char byte;
 #else
 #error Unsupported compiler
 #endif
-    
+
+u8 is_system_big_endian();
+u16 u16_reverse_bits(u16 value);
+u32 u32_reverse_bits(u32 value);
+u64 u64_reverse_bits(u64 value);
+
 #define __INTRINSICS_H
 #endif
