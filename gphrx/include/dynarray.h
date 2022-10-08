@@ -1,6 +1,7 @@
 #ifndef __DYN_ARRAY_H
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "assert.h"

@@ -16,23 +16,23 @@ static GphrxGraph new_gphrx(bool is_undirected)
     return graph;
 }
 
-GphrxGraph new_undirected_gphrx()
+DLLEXPORT GphrxGraph new_undirected_gphrx()
 {
     return new_gphrx(true);
 }
 
-GphrxGraph new_directed_gphrx()
+DLLEXPORT GphrxGraph new_directed_gphrx()
 {
     return new_gphrx(false);
 }
 
-void free_gphrx(GphrxGraph *graph)
+DLLEXPORT void free_gphrx(GphrxGraph *graph)
 {
     free_dynarr_u64(&graph->adjacency_matrix.matrix_col_idx_list);
     free_dynarr_u64(&graph->adjacency_matrix.matrix_row_idx_list);
 }
 
-void gphrx_shrink(GphrxGraph *graph)
+DLLEXPORT void gphrx_shrink(GphrxGraph *graph)
 {
     dynarr_u64_shrink(&graph->adjacency_matrix.matrix_col_idx_list);
     dynarr_u64_shrink(&graph->adjacency_matrix.matrix_row_idx_list);
@@ -95,13 +95,13 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
     return curr_idx;
 }
 
-void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count)
+DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count)
 {
     for (u64 i = 0; i < vertex_edge_count; ++i)
         gphrx_add_edge(graph, vertex_id, vertex_edges[i]);
 }
 
-void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
+DLLEXPORT void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
 {
     size_t vertex_idx = index_of_edge(&graph->adjacency_matrix.matrix_col_idx_list, vertex_id);
     size_t first_edge_idx = vertex_idx;
@@ -140,7 +140,7 @@ void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
         --graph->highest_vertex_id;
 }
 
-void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
+DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
 {
     size_t vertex_idx = from_vertex_id >= graph->highest_vertex_id
         ? graph->adjacency_matrix.matrix_col_idx_list.size
@@ -168,7 +168,7 @@ void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
         graph->highest_vertex_id = to_vertex_id;
 }
 
-GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
+DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
 {
     size_t vertex_idx = index_of_vertex(&graph->adjacency_matrix.matrix_col_idx_list,
                                         &graph->adjacency_matrix.matrix_row_idx_list,
@@ -194,9 +194,9 @@ GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_v
     return GPHRX_NO_ERROR;
 }
 
-GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
+DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
 
-byte *gphrx_to_byte_array(GphrxGraph *graph)
+DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph)
 {
     GphrxByteArrayHeader header = {
         .magic_number = GPHRX_HEADER_MAGIC_NUMBER,
@@ -271,7 +271,7 @@ byte *gphrx_to_byte_array(GphrxGraph *graph)
     return buffer;
 }
 
-GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
+DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
 {
     *error = GPHRX_NO_ERROR;
     GphrxGraph graph = {

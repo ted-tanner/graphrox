@@ -1,6 +1,7 @@
 #ifndef __GPHRX_H
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -54,46 +55,46 @@ typedef struct {
 /**
  * Creates an empty undirected GraphRox graph.
  */
-GphrxGraph new_undirected_gphrx();
+DLLEXPORT GphrxGraph new_undirected_gphrx();
 
 /**
  * Creates an empty directed GraphRox graph.
  */
-GphrxGraph new_directed_gphrx();
+DLLEXPORT GphrxGraph new_directed_gphrx();
 
 /**
  * Frees the memory used by a given graph.
  */
-void free_gphrx(GphrxGraph *graph);
+DLLEXPORT void free_gphrx(GphrxGraph *graph);
 
 /**
  * Frees up excess memory used by the lists that describe the graph. This can substantially reduce memory
  * usage for graphs that are static (meaning edges and vertices are no longer being added), but can make
  * subsequent modifications to the graph slower.
  */
-void gphrx_shrink(GphrxGraph *graph);
+DLLEXPORT void gphrx_shrink(GphrxGraph *graph);
 
 /**
  * Adds a vertex to the given graph.
  */
-void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count);
+DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count);
 
 /**
  * Removes a vertex from the given graph.
  */
-void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id);
+DLLEXPORT void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id);
 
 /**
  * Adds a link between two vertices. The "from" and "to" qualifiers on parameter names are only significant
  * when the graph is directed.
  */
-void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
 
 /**
  * Removes a link between two vertices. The "from" and "to" qualifiers on parameter names are only
  * significant when the graph is directed.
  */
-GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
 
 // TODO: Instead of depth as param, do height from bottom (perhaps call it compression_level or compression_power?)
 /**
@@ -101,17 +102,17 @@ GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_v
  * and a threshold of what percentage of edges must exist in a segment of the adjacency matrix for the
  * segment to be represented in the approximation. This is where the magic of GraphRox happens.
  */
-GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
+DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
 
 /**
  * Converts the given GphrxGraph to a big-endian byte array representation.
  */
-byte *gphrx_to_byte_array(GphrxGraph *graph);
+DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph);
 
 /**
  * Converts the given byte array from big-endian byte array representation of a GphrxGraph to a GphrxGraph.
  */
-GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error);
+DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error);
 
 
 #ifdef TEST_MODE

@@ -30,6 +30,12 @@ typedef unsigned char byte;
 #error Unsupported compiler
 #endif
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__CYGWIN__)
+#define DLLEXPORT __declspec(dllimport)
+#elif defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
+#define DLLEXPORT __attribute__((visibility ("default")))
+#endif
+
 u8 is_system_big_endian();
 u16 u16_reverse_bits(u16 value);
 u32 u32_reverse_bits(u32 value);
