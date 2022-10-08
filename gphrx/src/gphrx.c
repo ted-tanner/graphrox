@@ -271,6 +271,92 @@ byte *gphrx_to_byte_array(GphrxGraph *graph)
     return buffer;
 }
 
+GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
+{
+    *error = GPHRX_NO_ERROR;
+    GphrxGraph graph = {
+        .is_undirected = 0,
+        .highest_vertex_id = 0,
+        .adjacency_matrix = 0,
+    };
+    
+    size_t pos = 0;
+    GphrxByteArrayHeader header; 
+
+    memcpy(&header.magic_number, arr, sizeof(u32));
+    pos += sizeof(u32);
+
+    if (!is_system_big_endian())
+        header.magic_number = u32_reverse_bits(header.magic_number);
+
+    if (header.magic_number != GPHRX_HEADER_MAGIC_NUMBER)
+    {
+        *error = GPHRX_ERROR_INVALID_FORMAT;
+        return graph;
+    }
+    
+    memcpy(&header.version, arr + pos, sizeof(u32));
+    pos += sizeof(u32);
+
+    memcpy(&header.highest_vertex_id, arr + pos, sizeof(u64));
+    pos += sizeof(u64);
+
+    memcpy(&header.adjacency_matrix_dimension, arr + pos, sizeof(u64));
+    pos += sizeof(u64);
+
+    memcpy(&header.is_undirected, arr + pos, sizeof(u8));
+    pos += sizeof(u8);
+
+    memcpy(&header.is_weighted, arr + pos, sizeof(u8));
+    pos += sizeof(u8);
+
+    if (!is_system_big_endian())
+    {
+        header.version = u32_reverse_bits(header.version);
+        header.highest_vertex_id = u64_reverse_bits(header.highest_vertex_id);
+        header.adjacency_matrix_dimension = u64_reverse_bits(header.adjacency_matrix_dimension);
+    }
+
+    CsrAdjMatrix adjacency_matrix = {
+        .matrix_col_idx_list = new_dynarr_u64_with_capacity(header.adjacency_matrix_dimension),
+        .matrix_row_idx_list = new_dynarr_u64_with_capacity(header.adjacency_matrix_dimension),
+    };
+    
+    graph.is_undirected = header.is_undirected;
+    graph.highest_vertex_id = header.highest_vertex_id;
+    graph.adjacency_matrix = adjacency_matrix;
+
+    graph.adjacency_matrix.matrix_col_idx_list.size = header.adjacency_matrix_dimension;
+    graph.adjacency_matrix.matrix_row_idx_list.size = header.adjacency_matrix_dimension;
+
+    memcpy(graph.adjacency_matrix.matrix_col_idx_list.arr,
+               arr + pos,
+               header.adjacency_matrix_dimension * sizeof(u64));
+        
+    pos += header.adjacency_matrix_dimension * sizeof(u64);
+    
+    memcpy(graph.adjacency_matrix.matrix_row_idx_list.arr,
+           arr + pos,
+           header.adjacency_matrix_dimension * sizeof(u64));
+
+    if (!is_system_big_endian())
+    {
+        for (size_t i = 0; i < header.adjacency_matrix_dimension; ++i)
+        {
+            graph.adjacency_matrix.matrix_col_idx_list.arr[i] =
+                u64_reverse_bits(graph.adjacency_matrix.matrix_col_idx_list.arr[i]);
+        }
+
+        for (size_t i = 0; i < header.adjacency_matrix_dimension; ++i)
+        {
+            graph.adjacency_matrix.matrix_row_idx_list.arr[i] =
+                u64_reverse_bits(graph.adjacency_matrix.matrix_row_idx_list.arr[i]);
+        }
+    }
+    
+    return graph;
+}
+
 
 #ifdef TEST_MODE
 
@@ -699,6 +785,86 @@ static TEST_RESULT test_gphrx_remove_edge()
     return TEST_PASS;
 }
 
+static TEST_RESULT test_gphrx_to_from_byte_array()
+{
+    u64 to_edges[] = {3, 2, 100, 20, 9};
+    
+    GphrxGraph undirected_graph = new_undirected_gphrx();
+    
+    gphrx_add_edge(&undirected_graph, 2, 1002);
+    gphrx_add_vertex(&undirected_graph, 8, to_edges, 5);
+    gphrx_add_edge(&undirected_graph, 501, 1003);
+    gphrx_add_edge(&undirected_graph, 501, 8);
+    
+    byte *arr = gphrx_to_byte_array(&undirected_graph);
+
+    GphrxErrorCode error;
+    GphrxGraph undir_graph_from_arr = gphrx_from_byte_array(arr, &error);
+
+    assert(error == GPHRX_NO_ERROR, "Error unpacking graph from byte array");
+
+    assert(undir_graph_from_arr.is_undirected, "Incorrectly loaded graph");
+    assert(undir_graph_from_arr.highest_vertex_id == undirected_graph.highest_vertex_id,
+           "Incorrectly loaded graph");
+
+    assert(undir_graph_from_arr.adjacency_matrix.matrix_col_idx_list.size ==
+           undirected_graph.adjacency_matrix.matrix_col_idx_list.size,
+           "Incorrectly loaded graph adjacency matrix");
+
+    assert(undir_graph_from_arr.adjacency_matrix.matrix_row_idx_list.size ==
+           undirected_graph.adjacency_matrix.matrix_row_idx_list.size,
+           "Incorrectly loaded graph adjacency matrix");
+
+    for (size_t i = 0; i < undirected_graph.adjacency_matrix.matrix_col_idx_list.size; ++i)
+    {
+        assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.arr[i] ==
+               undir_graph_from_arr.adjacency_matrix.matrix_col_idx_list.arr[i],
+               "Incorrectly loaded graph adjacency matrix");
+
+        assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.arr[i] ==
+               undir_graph_from_arr.adjacency_matrix.matrix_row_idx_list.arr[i],
+               "Incorrectly loaded graph adjacency matrix");
+    }
+    
+    GphrxGraph directed_graph = new_directed_gphrx();
+    
+    gphrx_add_edge(&directed_graph, 1, 1000);
+    gphrx_add_vertex(&directed_graph, 7, to_edges, 5);
+    gphrx_add_edge(&directed_graph, 500, 1001);
+    gphrx_add_edge(&directed_graph, 500, 7);
+
+    arr = gphrx_to_byte_array(&directed_graph);
+
+    GphrxGraph dir_graph_from_arr = gphrx_from_byte_array(arr, &error);
+
+    assert(error == GPHRX_NO_ERROR, "Error unpacking graph from byte array");
+
+    assert(!dir_graph_from_arr.is_undirected, "Incorrectly loaded graph");
+    assert(dir_graph_from_arr.highest_vertex_id == directed_graph.highest_vertex_id,
+           "Incorrectly loaded graph");
+
+    assert(dir_graph_from_arr.adjacency_matrix.matrix_col_idx_list.size ==
+           directed_graph.adjacency_matrix.matrix_col_idx_list.size,
+           "Incorrectly loaded graph adjacency matrix");
+
+    assert(dir_graph_from_arr.adjacency_matrix.matrix_row_idx_list.size ==
+           directed_graph.adjacency_matrix.matrix_row_idx_list.size,
+           "Incorrectly loaded graph adjacency matrix");
+
+    for (size_t i = 0; i < directed_graph.adjacency_matrix.matrix_col_idx_list.size; ++i)
+    {
+        assert(directed_graph.adjacency_matrix.matrix_col_idx_list.arr[i] ==
+               dir_graph_from_arr.adjacency_matrix.matrix_col_idx_list.arr[i],
+               "Incorrectly loaded graph adjacency matrix");
+
+        assert(directed_graph.adjacency_matrix.matrix_row_idx_list.arr[i] ==
+               dir_graph_from_arr.adjacency_matrix.matrix_row_idx_list.arr[i],
+               "Incorrectly loaded graph adjacency matrix");
+    }
+    
+    return TEST_PASS;
+}
+
 ModuleTestSet gphrx_h_register_tests()
 {
     ModuleTestSet set = {
@@ -714,6 +880,7 @@ ModuleTestSet gphrx_h_register_tests()
     register_test(&set, test_gphrx_remove_vertex);
     register_test(&set, test_gphrx_add_edge);
     register_test(&set, test_gphrx_remove_edge);
+    register_test(&set, test_gphrx_to_from_byte_array);
 
     return set;
 }
