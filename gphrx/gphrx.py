@@ -6,6 +6,26 @@ import platform
 import sys
 
 
+class _DynamicArrayU64_c(ctypes.Structure):
+    _fields_ = [
+        ("capacity", ctypes.c_size_t),
+        ("size", ctypes.c_size_t),
+        ("arr", ctypes.POINTER(ctypes.c_uint64))]
+
+    
+class _CsrAdjMatrix_c(ctypes.Structure):
+    _fields_ = [
+        ("matrix_col_idx_list", _DynamicArrayU64_c),
+        ("matrix_row_idx_list", _DynamicArrayU64_c)]
+
+    
+class _GphrxGraph_c(ctypes.Structure):
+    _fields_ = [
+        ("is_undirected", ctypes.c_bool),
+        ("highest_vertex_id", ctypes.c_uint64),
+        ("adjacency_matrix", _CsrAdjMatrix_c)]
+
+
 _libs_path = os.path.join(Path(__file__).resolve().parent, 'lib')
 
 _os_name = platform.system()
@@ -22,69 +42,50 @@ elif _os_name == 'Darwin':
 else:
     raise ImportError('GraphRox module not supported on this system')
 
-
 _gphrx_lib_path = os.path.join(_libs_path, _dll_name)
 _gphrx_lib = ctypes.cdll.LoadLibrary(_gphrx_lib_path)
-
-
-class _DynamicArrayU64(ctypes.Structure):
-    _fields_ = [
-        ("capacity", ctypes.c_size_t),
-        ("size", ctypes.c_size_t),
-        ("arr", ctypes.POINTER(ctypes.c_uint64))]
     
-class _CsrAdjMatrix(ctypes.Structure):
-    _fields_ = [
-        ("matrix_col_idx_list", _DynamicArrayU64),
-        ("matrix_row_idx_list", _DynamicArrayU64)]
-
-class _GphrxGraph(ctypes.Structure):
-    _fields_ = [
-        ("is_undirected", ctypes.c_bool),
-        ("highest_vertex_id", ctypes.c_uint64),
-        ("adjacency_matrix", _CsrAdjMatrix)]
-
 _gphrx_lib_path = os.path.join(_libs_path, _dll_name)
 _gphrx_lib = ctypes.cdll.LoadLibrary(_gphrx_lib_path)
 
 _gphrx_lib.new_undirected_gphrx.argtypes = None
-_gphrx_lib.new_undirected_gphrx.restype = _GphrxGraph
+_gphrx_lib.new_undirected_gphrx.restype = _GphrxGraph_c
 
 _gphrx_lib.new_directed_gphrx.argtypes = None
-_gphrx_lib.new_directed_gphrx.restype = _GphrxGraph
+_gphrx_lib.new_directed_gphrx.restype = _GphrxGraph_c
 
-_gphrx_lib.free_gphrx.argtypes = [ctypes.POINTER(_GphrxGraph)]
+_gphrx_lib.free_gphrx.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.free_gphrx.restype = None
 
-_gphrx_lib.gphrx_shrink.argtypes = [ctypes.POINTER(_GphrxGraph)]
+_gphrx_lib.gphrx_shrink.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.gphrx_shrink.restype = None
 
-_gphrx_lib.gphrx_add_vertex.argtypes = (ctypes.POINTER(_GphrxGraph),
+_gphrx_lib.gphrx_add_vertex.argtypes = (ctypes.POINTER(_GphrxGraph_c),
                                         ctypes.c_uint64,
                                         ctypes.POINTER(ctypes.c_uint64),
                                         ctypes.c_uint64)
 _gphrx_lib.gphrx_add_vertex.restype = None
 
-_gphrx_lib.gphrx_remove_vertex.argtypes = (ctypes.POINTER(_GphrxGraph), ctypes.c_uint64)
+_gphrx_lib.gphrx_remove_vertex.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64)
 _gphrx_lib.gphrx_remove_vertex.restype = None
 
-_gphrx_lib.gphrx_add_edge.argtypes = (ctypes.POINTER(_GphrxGraph), ctypes.c_uint64, ctypes.c_uint64)
+_gphrx_lib.gphrx_add_edge.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64, ctypes.c_uint64)
 _gphrx_lib.gphrx_add_edge.restype = None
 
-_gphrx_lib.gphrx_remove_edge.argtypes = (ctypes.POINTER(_GphrxGraph), ctypes.c_uint64, ctypes.c_uint64)
+_gphrx_lib.gphrx_remove_edge.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64, ctypes.c_uint64)
 _gphrx_lib.gphrx_remove_edge.restype = ctypes.c_uint8
 
-_gphrx_lib.gphrx_to_byte_array.argtypes = [ctypes.POINTER(_GphrxGraph)]
+_gphrx_lib.gphrx_to_byte_array.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.gphrx_to_byte_array.restype = ctypes.POINTER(ctypes.c_ubyte)
 
 _gphrx_lib.gphrx_from_byte_array.argtypes = [ctypes.POINTER(ctypes.c_ubyte)]
-_gphrx_lib.gphrx_from_byte_array.restype = _GphrxGraph
+_gphrx_lib.gphrx_from_byte_array.restype = _GphrxGraph_c
 
 _gphrx_lib.free_gphrx_byte_array.argtypes = [ctypes.c_void_p]
 _gphrx_lib.free_gphrx_byte_array.restype = None
 
 
-class GphrxGraph():
+class _GphrxGraph:
     def __init__(self, is_undirected):
         self.is_undirected = is_undirected
         self.highest_vertex_id = 0
@@ -93,11 +94,9 @@ class GphrxGraph():
     def __del__(self):
         _gphrx_lib.free_gphrx(self._graph)
 
-    @classmethod
     def shrink(self):
         _gphrx_lib.gphrx_shrink(self._graph)
 
-    @classmethod
     def add_vertex(self, vertex_id, vertex_edges):
         edges_arr = ctypes.c_uint64 * len(vertex_edges)
         _gphrx_lib.gphrx_add_vertex(self._graph, vertex_id, edges_arr(*vertex_edges), len(vertex_edges))
@@ -105,21 +104,18 @@ class GphrxGraph():
         if self._graph.highest_vertex_id != self.highest_vertex_id:
             self.highest_vertex_id = self._graph.highest_vertex_id
 
-    @classmethod
     def remove_vertex(self, vertex_id):
         _gphrx_lib.gphrx_remove_vertex(self._graph, vertex_id)
 
         if self._graph.highest_vertex_id != self.highest_vertex_id:
             self.highest_vertex_id = self._graph.highest_vertex_id
 
-    @classmethod
     def add_edge(self, from_vertex_id, to_vertex_id):
         _gphrx_lib.gphrx_add_edge(self._graph, from_vertex_id, to_vertex_id)
 
         if self._graph.highest_vertex_id != self.highest_vertex_id:
             self.highest_vertex_id = self._graph.highest_vertex_id
 
-    @classmethod
     def remove_edge(self, from_vertex_id, to_vertex_id):
         _gphrx_lib.gphrx_remove_edge(self._graph, from_vertex_id, to_vertex_id)
 
@@ -132,7 +128,9 @@ class GphrxGraph():
         UINT64_SIZE_IN_BYTES = 8
         
         byte_array_ptr = _gphrx_lib.gphrx_to_byte_array(self._graph)
-        header = (ctypes.c_uint8 * HEADER_SIZE_IN_BYTES).from_buffer(byte_array_ptr)
+        
+        header = (ctypes.c_uint8 * HEADER_SIZE_IN_BYTES).from_buffer(
+            ctypes.cast(byte_array_ptr, ctypes.POINTER(ctypes.c_ubyte * HEADER_SIZE_IN_BYTES)))
         
         dimension_bytes = header[HEADER_POS_OF_MATRIX_DIMENSION:UINT64_SIZE_IN_BYTES]
         dimension = int.from_bytes(dimension_bytes, byteorder='big', signed=False)
@@ -147,12 +145,12 @@ class GphrxGraph():
         return bytes_obj
 
 
-class GphrxUndirectedGraph(GphrxGraph):
+class GphrxUndirectedGraph(_GphrxGraph):
     def __init__(self):
         super().__init__(True)
 
 
-class GphrxDirectedGraph(GphrxGraph):
+class GphrxDirectedGraph(_GphrxGraph):
     def __init__(self):
         super().__init__(False)
 
@@ -160,6 +158,10 @@ class GphrxDirectedGraph(GphrxGraph):
 if __name__ == '__main__':
     test = GphrxUndirectedGraph()
     
-    
-    print(bytes(test))
+    print(test.highest_vertex_id)
+    test.add_edge(10, 100)
+    print(test.highest_vertex_id)
+    test.add_vertex(122, [1, 10, 100, 1001])
+    test.add_edge(10, 100)
+    print(test.highest_vertex_id)
 
