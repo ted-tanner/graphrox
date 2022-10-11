@@ -281,7 +281,7 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
     };
     
     size_t pos = 0;
-    GphrxByteArrayHeader header; 
+    GphrxByteArrayHeader header;
 
     memcpy(&header.magic_number, arr, sizeof(u32));
     pos += sizeof(u32);

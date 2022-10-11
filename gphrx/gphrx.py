@@ -1,3 +1,4 @@
+from enum import Enum
 from pathlib import Path
 
 import ctypes
@@ -24,6 +25,12 @@ class _GphrxGraph_c(ctypes.Structure):
         ("is_undirected", ctypes.c_bool),
         ("highest_vertex_id", ctypes.c_uint64),
         ("adjacency_matrix", _CsrAdjMatrix_c)]
+
+
+class _GphrxErrorCode(Enum):
+    GPHRX_NO_ERROR = 0
+    GPHRX_ERROR_NOT_FOUND = 1
+    GPHRX_ERROR_INVALID_FORMAT = 2
 
 
 _libs_path = os.path.join(Path(__file__).resolve().parent, 'lib')
@@ -85,15 +92,33 @@ _gphrx_lib.free_gphrx_byte_array.argtypes = [ctypes.c_void_p]
 _gphrx_lib.free_gphrx_byte_array.restype = None
 
 
-class _GphrxGraph:
-    def __init__(self, is_undirected):
-        self.is_undirected = is_undirected
-        self.highest_vertex_id = 0
-        self._graph = _gphrx_lib.new_undirected_gphrx() if is_undirected else _gphrx_lib.new_directed_gphrx()
+class GphrxGraph:
+    def __init__(self, is_undirected=True, byte_array=None):
+        if byte_array is not None:
+            pass
+        else: 
+            self.is_undirected = is_undirected
+            self.highest_vertex_id = 0
+            self._graph = _gphrx_lib.new_undirected_gphrx() if is_undirected else _gphrx_lib.new_directed_gphrx()
 
     def __del__(self):
         _gphrx_lib.free_gphrx(self._graph)
 
+    @staticmethod
+    def from_bytes(byte_array):
+        error_code = ctypes.c_uint8()
+        arr = (ctypes.c_ubyte * (len(byte_array))).from_buffer(bytearray(byte_array))
+        c_graph = _gphrx_lib.gphrx_from_byte_array(arr, ctypes.byref(error_code))
+
+        if error_code.value != _GphrxErrorCode.GPHRX_NO_ERROR.value:
+            raise ValueError("GrphxGraph could not be constructed from the provided bytes")
+
+        graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
+        graph.highest_vertex_id = c_graph.highest_vertex_id
+        graph._graph = c_graph
+        return graph
+
+        
     def shrink(self):
         _gphrx_lib.gphrx_shrink(self._graph)
 
@@ -119,38 +144,35 @@ class _GphrxGraph:
     def remove_edge(self, from_vertex_id, to_vertex_id):
         _gphrx_lib.gphrx_remove_edge(self._graph, from_vertex_id, to_vertex_id)
 
+        # TODO: Throw exception
+
         if self._graph.highest_vertex_id != self.highest_vertex_id:
             self.highest_vertex_id = self._graph.highest_vertex_id
 
     def __bytes__(self):
         HEADER_SIZE_IN_BYTES = 26
         HEADER_POS_OF_MATRIX_DIMENSION = 16
-        UINT64_SIZE_IN_BYTES = 8
         
         byte_array_ptr = _gphrx_lib.gphrx_to_byte_array(self._graph)
         
-        header = (ctypes.c_uint8 * HEADER_SIZE_IN_BYTES).from_buffer(
-            ctypes.cast(byte_array_ptr, ctypes.POINTER(ctypes.c_ubyte * HEADER_SIZE_IN_BYTES)))
-        
-        dimension_bytes = header[HEADER_POS_OF_MATRIX_DIMENSION:UINT64_SIZE_IN_BYTES]
+        dimension_bytes = byte_array_ptr[HEADER_POS_OF_MATRIX_DIMENSION:
+                                         HEADER_POS_OF_MATRIX_DIMENSION + ctypes.sizeof(ctypes.c_uint64)]
         dimension = int.from_bytes(dimension_bytes, byteorder='big', signed=False)
-        
-        total_array_size = HEADER_SIZE_IN_BYTES + dimension * 2 * UINT64_SIZE_IN_BYTES
-        byte_array = (ctypes.c_uint8 * total_array_size).from_buffer(byte_array_ptr)
 
-        bytes_obj = bytes(byte_array)
+        total_array_size = HEADER_SIZE_IN_BYTES + dimension * 2 * ctypes.sizeof(ctypes.c_uint64)
+        bytes_obj = bytes(byte_array_ptr[:total_array_size])
 
         _gphrx_lib.free_gphrx_byte_array(byte_array_ptr)
 
         return bytes_obj
 
 
-class GphrxUndirectedGraph(_GphrxGraph):
+class GphrxUndirectedGraph(GphrxGraph):
     def __init__(self):
         super().__init__(True)
+        
 
-
-class GphrxDirectedGraph(_GphrxGraph):
+class GphrxDirectedGraph(GphrxGraph):
     def __init__(self):
         super().__init__(False)
 
@@ -164,4 +186,9 @@ if __name__ == '__main__':
     test.add_vertex(122, [1, 10, 100, 1001])
     test.add_edge(10, 100)
     print(test.highest_vertex_id)
+    test.remove_edge(122, 10)
+    test.remove_vertex(122)
+    test.shrink()
 
+    test2 = GphrxGraph.from_bytes(bytes(test))
+    print(test2.highest_vertex_id)

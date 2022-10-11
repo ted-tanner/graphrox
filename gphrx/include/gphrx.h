@@ -119,7 +119,7 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error);
  * foreign function interfaces for other languages importing GraphRox as a dynamic link library so they can
  * free memory allocated for byte arrays created by the `gphrx_from_byte_array()` function.
  */
-DLLEXPORT void free_byte_array(void *arr);
+DLLEXPORT void free_gphrx_byte_array(void *arr);
 
 
 #ifdef TEST_MODE
