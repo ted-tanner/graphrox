@@ -357,6 +357,10 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
     return graph;
 }
 
+DLLEXPORT void free_gphrx_byte_array(void *arr)
+{
+    free(arr);
+}
 
 #ifdef TEST_MODE
 

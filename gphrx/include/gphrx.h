@@ -114,6 +114,13 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph);
  */
 DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error);
 
+/**
+ * Calls the C standard library `free()` on the provided pointer. This function is only intended for use by
+ * foreign function interfaces for other languages importing GraphRox as a dynamic link library so they can
+ * free memory allocated for byte arrays created by the `gphrx_from_byte_array()` function.
+ */
+DLLEXPORT void free_byte_array(void *arr);
+
 
 #ifdef TEST_MODE
 
