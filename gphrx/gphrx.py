@@ -67,6 +67,9 @@ _gphrx_lib.free_gphrx.restype = None
 _gphrx_lib.gphrx_shrink.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.gphrx_shrink.restype = None
 
+_gphrx_lib.gphrx_does_edge_exist.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64, ctypes.c_uint64)
+_gphrx_lib.gphrx_does_edge_exist.restype = ctypes.c_bool
+
 _gphrx_lib.gphrx_add_vertex.argtypes = (ctypes.POINTER(_GphrxGraph_c),
                                         ctypes.c_uint64,
                                         ctypes.POINTER(ctypes.c_uint64),
@@ -117,10 +120,12 @@ class GphrxGraph:
         graph.highest_vertex_id = c_graph.highest_vertex_id
         graph._graph = c_graph
         return graph
-
         
     def shrink(self):
         _gphrx_lib.gphrx_shrink(self._graph)
+
+    def does_edge_exist(self, from_vertex_id, to_vertex_id):
+        return _gphrx_lib.gphrx_does_edge_exist(self._graph, from_vertex_id, to_vertex_id)
 
     def add_vertex(self, vertex_id, vertex_edges):
         edges_arr = ctypes.c_uint64 * len(vertex_edges)
@@ -142,10 +147,12 @@ class GphrxGraph:
             self.highest_vertex_id = self._graph.highest_vertex_id
 
     def remove_edge(self, from_vertex_id, to_vertex_id):
-        _gphrx_lib.gphrx_remove_edge(self._graph, from_vertex_id, to_vertex_id)
+        error_code = _gphrx_lib.gphrx_remove_edge(self._graph, from_vertex_id, to_vertex_id)
 
-        # TODO: Throw exception
-
+        if error_code == _GphrxErrorCode.GPHRX_ERROR_NOT_FOUND.value:
+            raise ValueError("Edge from vertex " + str(from_vertex_id) +
+                             " to vertex " + str(to_vertex_id) + " does not exist")
+        
         if self._graph.highest_vertex_id != self.highest_vertex_id:
             self.highest_vertex_id = self._graph.highest_vertex_id
 
@@ -185,6 +192,7 @@ if __name__ == '__main__':
     print(test.highest_vertex_id)
     test.add_vertex(122, [1, 10, 100, 1001])
     test.add_edge(10, 100)
+    print(test.does_edge_exist(10, 100))
     print(test.highest_vertex_id)
     test.remove_edge(122, 10)
     test.remove_vertex(122)

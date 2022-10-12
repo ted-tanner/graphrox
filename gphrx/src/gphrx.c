@@ -95,6 +95,21 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
     return curr_idx;
 }
 
+DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
+{
+    size_t vertex_idx = index_of_vertex(&graph->adjacency_matrix.matrix_col_idx_list,
+                                        &graph->adjacency_matrix.matrix_row_idx_list,
+                                        from_vertex_id, to_vertex_id);
+
+    if (dynarr_u64_get(&graph->adjacency_matrix.matrix_col_idx_list, vertex_idx) == from_vertex_id
+        && dynarr_u64_get(&graph->adjacency_matrix.matrix_row_idx_list, vertex_idx) == to_vertex_id)
+    {
+        return true;
+    }
+
+    return false;
+}
+
 DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count)
 {
     for (u64 i = 0; i < vertex_edge_count; ++i)
@@ -421,6 +436,41 @@ static TEST_RESULT test_gphrx_shrink()
     assert(directed_graph.adjacency_matrix.matrix_col_idx_list.capacity == 0, "Incorrect matrix cols size");
     assert(directed_graph.adjacency_matrix.matrix_row_idx_list.capacity == 0, "Incorrect matrix rows size");
 
+    free_gphrx(&undirected_graph);
+    free_gphrx(&directed_graph);
+    
+    return TEST_PASS;
+}
+
+static TEST_RESULT test_gphrx_does_edge_exist()
+{
+    GphrxGraph undirected_graph = new_undirected_gphrx();
+    GphrxGraph directed_graph = new_directed_gphrx();
+
+    assert(!gphrx_does_edge_exist(&undirected_graph, 1, 1000), "Edge should not exist");
+    assert(!gphrx_does_edge_exist(&undirected_graph, 1000, 1), "Edge should not exist");
+    assert(!gphrx_does_edge_exist(&directed_graph, 1, 1000), "Edge should not exist");
+    
+    gphrx_add_edge(&undirected_graph, 1, 1000);
+    gphrx_add_edge(&directed_graph, 1, 1000);
+    
+    assert(gphrx_does_edge_exist(&undirected_graph, 1, 1000), "Edge should exist");
+    assert(gphrx_does_edge_exist(&undirected_graph, 1000, 1), "Edge should exist");
+    assert(gphrx_does_edge_exist(&directed_graph, 1, 1000), "Edge should exist");
+    
+    assert(!gphrx_does_edge_exist(&directed_graph, 1000, 1), "Edge should not exist");
+    gphrx_add_edge(&directed_graph, 1000, 1);
+    assert(gphrx_does_edge_exist(&directed_graph, 1000, 1), "Edge should exist");
+
+    assert(!gphrx_does_edge_exist(&undirected_graph, 100, 100), "Edge should not exist");
+    assert(!gphrx_does_edge_exist(&directed_graph, 100, 100), "Edge should not exist");
+    
+    gphrx_add_edge(&undirected_graph, 100, 100);
+    gphrx_add_edge(&directed_graph, 100, 100);
+    
+    assert(gphrx_does_edge_exist(&undirected_graph, 100, 100), "Edge should exist");
+    assert(gphrx_does_edge_exist(&directed_graph, 100, 100), "Edge should exist");
+    
     free_gphrx(&undirected_graph);
     free_gphrx(&directed_graph);
     
@@ -880,6 +930,7 @@ ModuleTestSet gphrx_h_register_tests()
     register_test(&set, test_new_gphrx);
     register_test(&set, test_free_gphrx);
     register_test(&set, test_gphrx_shrink);
+    register_test(&set, test_gphrx_does_edge_exist);
     register_test(&set, test_gphrx_add_vertex);
     register_test(&set, test_gphrx_remove_vertex);
     register_test(&set, test_gphrx_add_edge);

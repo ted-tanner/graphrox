@@ -75,6 +75,11 @@ DLLEXPORT void free_gphrx(GphrxGraph *graph);
 DLLEXPORT void gphrx_shrink(GphrxGraph *graph);
 
 /**
+ * Returns `true` if an edge with the given to and from vertex IDs exists and `false` otherwise.
+ */
+DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+
+/**
  * Adds a vertex to the given graph.
  */
 DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count);
