@@ -9,6 +9,11 @@
 #include "dynarray.h"
 #include "intrinsics.h"
 
+// TODO: Functions
+//         - Get height of tree
+//         - Set highest vertex id (need to keep track of what the highest vertex id
+//           the user has set is to know whether to decrement in remove_vertex)
+
 
 /** Error codes */
 typedef u8 GphrxErrorCode;
@@ -63,6 +68,11 @@ DLLEXPORT GphrxGraph new_undirected_gphrx();
 DLLEXPORT GphrxGraph new_directed_gphrx();
 
 /**
+ * Creates a copy of the given GraphRox graph.
+ */
+DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph);
+
+/**
  * Frees the memory used by a given graph.
  */
 DLLEXPORT void free_gphrx(GphrxGraph *graph);
@@ -101,13 +111,17 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
  */
 DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
 
-// TODO: Instead of depth as param, do height from bottom (perhaps call it compression_level or compression_power?)
 /**
- * Generates an approximation of a graph at a given depth in the bit-order tree representation of the graph
- * and a threshold of what percentage of edges must exist in a segment of the adjacency matrix for the
- * segment to be represented in the approximation. This is where the magic of GraphRox happens.
+ * Generates an approximation of a graph. This is where the magic of GraphRox happens.
+ *
+ * @param level is the height in the approxmation tree representation of each columnin the adjacency
+ * matrix. Increasing the level by one will cut the size of the approximated graph roughly in half.
+ *
+ * @param threshold is the percentage of entries in a section of an adjacency matrix column that must be
+ * 1 rather than 0 at the provided level for the approximated adjacency matrix to represent to section
+ * with a 1. The value is expected to be between 0 and 1.
  */
-DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
+DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u16 level, float threshold);
 
 /**
  * Converts the given GphrxGraph to a big-endian byte array representation.

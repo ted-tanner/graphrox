@@ -61,6 +61,9 @@ _gphrx_lib.new_undirected_gphrx.restype = _GphrxGraph_c
 _gphrx_lib.new_directed_gphrx.argtypes = None
 _gphrx_lib.new_directed_gphrx.restype = _GphrxGraph_c
 
+_gphrx_lib.duplicate_gphrx.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
+_gphrx_lib.duplicate_gphrx.restype = _GphrxGraph_c
+
 _gphrx_lib.free_gphrx.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.free_gphrx.restype = None
 
@@ -119,6 +122,15 @@ class GphrxGraph:
         graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
         graph.highest_vertex_id = c_graph.highest_vertex_id
         graph._graph = c_graph
+        return graph
+
+    def duplicate(self):
+        c_graph = _gphrx_lib.duplicate_gphrx(self._graph)
+        
+        graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
+        graph.highest_vertex_id = c_graph.highest_vertex_id
+        graph._graph = c_graph
+
         return graph
         
     def shrink(self):
@@ -201,6 +213,7 @@ if __name__ == '__main__':
     test.add_edge(10, 100)
     print(test.highest_vertex_id)
     test.add_vertex(122, [1, 10, 100, 1001])
+    test = test.duplicate()
     test.add_edge(10, 100)
     print(test.does_edge_exist(10, 100))
     print(test.highest_vertex_id)

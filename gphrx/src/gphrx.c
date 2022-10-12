@@ -26,6 +26,35 @@ DLLEXPORT GphrxGraph new_directed_gphrx()
     return new_gphrx(false);
 }
 
+DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph)
+{
+    size_t edge_count = graph->adjacency_matrix.matrix_col_idx_list.size;
+        
+    CsrAdjMatrix adjacency_matrix = {
+        .matrix_col_idx_list = new_dynarr_u64_with_capacity(edge_count),
+        .matrix_row_idx_list = new_dynarr_u64_with_capacity(edge_count),
+    };
+
+    adjacency_matrix.matrix_col_idx_list.size = edge_count;
+    adjacency_matrix.matrix_row_idx_list.size = edge_count;
+
+    memcpy(adjacency_matrix.matrix_col_idx_list.arr,
+           graph->adjacency_matrix.matrix_col_idx_list.arr,
+           edge_count * sizeof(u64));
+
+    memcpy(adjacency_matrix.matrix_row_idx_list.arr,
+           graph->adjacency_matrix.matrix_row_idx_list.arr,
+           edge_count * sizeof(u64));
+
+    GphrxGraph duplicate_graph = {
+        .is_undirected = graph->is_undirected,
+        .highest_vertex_id = graph->highest_vertex_id,
+        .adjacency_matrix = adjacency_matrix,
+    };
+
+    return duplicate_graph;
+}
+
 DLLEXPORT void free_gphrx(GphrxGraph *graph)
 {
     free_dynarr_u64(&graph->adjacency_matrix.matrix_col_idx_list);
@@ -209,7 +238,26 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id
     return GPHRX_NO_ERROR;
 }
 
-DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 depth, float threshold);
+DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u16 level, float threshold)
+{
+    if (threshold > 1.0f)
+        threshold = 1.0f;
+    else if (threshold < 0.0f)
+        threshold = 0.0f;
+
+    if (level == 0)
+        return duplicate_gphrx(graph);
+
+    size_t partition_size = fast_div_pow_2(graph->highest_vertex_id, level);
+    
+    if (partition_size == 0)
+        partition_size = 1;
+
+    // TODO
+
+
+    return duplicate_gphrx(graph);
+}
 
 DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph)
 {
@@ -397,6 +445,69 @@ static TEST_RESULT test_new_gphrx()
 
     free_gphrx(&undirected_graph);
     free_gphrx(&directed_graph);
+    
+    return TEST_PASS;
+}
+
+static TEST_RESULT test_duplicate_gphrx()
+{
+    GphrxGraph undirected_graph = new_undirected_gphrx();
+    GphrxGraph directed_graph = new_directed_gphrx();
+
+    gphrx_add_edge(&undirected_graph, 1, 1000);
+    gphrx_add_edge(&undirected_graph, 500, 1001);
+    gphrx_add_edge(&undirected_graph, 500, 7);
+    
+    gphrx_add_edge(&directed_graph, 1, 1000);
+    gphrx_add_edge(&directed_graph, 500, 1001);
+    gphrx_add_edge(&directed_graph, 500, 7);
+
+    GphrxGraph dup_undirected_graph = duplicate_gphrx(&undirected_graph);
+    GphrxGraph dup_directed_graph = duplicate_gphrx(&directed_graph);
+
+    assert(undirected_graph.is_undirected == dup_undirected_graph.is_undirected, "Graph was incorrectly duplicated");
+    assert(undirected_graph.highest_vertex_id == dup_undirected_graph.highest_vertex_id,
+           "Graph was incorrectly duplicated");
+    assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.size ==
+           dup_undirected_graph.adjacency_matrix.matrix_col_idx_list.size, "Graph was incorrectly duplicated");
+    assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.size ==
+           dup_undirected_graph.adjacency_matrix.matrix_row_idx_list.size, "Graph was incorrectly duplicated");
+
+    assert(directed_graph.is_undirected == dup_directed_graph.is_undirected, "Graph was incorrectly duplicated");
+    assert(directed_graph.highest_vertex_id == dup_directed_graph.highest_vertex_id,
+           "Graph was incorrectly duplicated");
+    assert(directed_graph.adjacency_matrix.matrix_col_idx_list.size ==
+           dup_directed_graph.adjacency_matrix.matrix_col_idx_list.size, "Graph was incorrectly duplicated");
+    assert(directed_graph.adjacency_matrix.matrix_row_idx_list.size ==
+           dup_directed_graph.adjacency_matrix.matrix_row_idx_list.size, "Graph was incorrectly duplicated");
+
+    for (size_t i = 0; i < undirected_graph.adjacency_matrix.matrix_col_idx_list.size; ++i)
+    {
+        assert(undirected_graph.adjacency_matrix.matrix_col_idx_list.arr[i]
+               == dup_undirected_graph.adjacency_matrix.matrix_col_idx_list.arr[i],
+               "Graph was incorrectly duplicated");
+        
+        assert(undirected_graph.adjacency_matrix.matrix_row_idx_list.arr[i]
+               == dup_undirected_graph.adjacency_matrix.matrix_row_idx_list.arr[i],
+               "Graph was incorrectly duplicated");
+    }
+
+    for (size_t i = 0; i < directed_graph.adjacency_matrix.matrix_col_idx_list.size; ++i)
+    {
+        assert(directed_graph.adjacency_matrix.matrix_col_idx_list.arr[i]
+               == dup_directed_graph.adjacency_matrix.matrix_col_idx_list.arr[i],
+               "Graph was incorrectly duplicated");
+        
+        assert(directed_graph.adjacency_matrix.matrix_row_idx_list.arr[i]
+               == dup_directed_graph.adjacency_matrix.matrix_row_idx_list.arr[i],
+               "Graph was incorrectly duplicated");
+    }
+    
+    free_gphrx(&undirected_graph);
+    free_gphrx(&directed_graph);
+
+    free_gphrx(&dup_undirected_graph);
+    free_gphrx(&dup_directed_graph);
     
     return TEST_PASS;
 }
@@ -928,6 +1039,7 @@ ModuleTestSet gphrx_h_register_tests()
     };
 
     register_test(&set, test_new_gphrx);
+    register_test(&set, test_duplicate_gphrx);
     register_test(&set, test_free_gphrx);
     register_test(&set, test_gphrx_shrink);
     register_test(&set, test_gphrx_does_edge_exist);

@@ -19,7 +19,7 @@ typedef unsigned char byte;
 #define PAGE_SIZE 4096
 
 #define fast_mod_pow_2(operand1, operand2) ((operand1) & ((operand2) - 1))
-#define fast_mult_pow_2(operand, pow) ((operand) << (pow)) 
+#define fast_mult_pow_2(operand, pow) ((operand) << (pow))
 #define fast_div_pow_2(operand, pow) ((operand) >> (pow))
 
 #ifdef _MSC_VER
