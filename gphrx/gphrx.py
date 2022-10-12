@@ -156,6 +156,15 @@ class GphrxGraph:
         if self._graph.highest_vertex_id != self.highest_vertex_id:
             self.highest_vertex_id = self._graph.highest_vertex_id
 
+    def save_to_file(self, file_name):
+        with open(file_name, 'wb') as f:
+            f.write(bytes(self))
+
+    @staticmethod
+    def load_from_file(file_name):
+        with open(file_name, 'rb') as f:
+            return GphrxGraph.from_bytes(f.read())
+
     def __bytes__(self):
         HEADER_SIZE_IN_BYTES = 26
         HEADER_POS_OF_MATRIX_DIMENSION = 16
@@ -186,6 +195,7 @@ class GphrxDirectedGraph(GphrxGraph):
 
 if __name__ == '__main__':
     test = GphrxUndirectedGraph()
+    print(test)
     
     print(test.highest_vertex_id)
     test.add_edge(10, 100)
@@ -194,6 +204,9 @@ if __name__ == '__main__':
     test.add_edge(10, 100)
     print(test.does_edge_exist(10, 100))
     print(test.highest_vertex_id)
+
+    # test.save_to_file('./test.gphrx')
+    
     test.remove_edge(122, 10)
     test.remove_vertex(122)
     test.shrink()
