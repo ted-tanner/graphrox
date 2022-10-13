@@ -141,6 +141,9 @@ DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 
 
 DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count)
 {
+    if (vertex_id > graph->highest_vertex_id)
+        graph->highest_vertex_id = vertex_id;
+        
     for (u64 i = 0; i < vertex_edge_count; ++i)
         gphrx_add_edge(graph, vertex_id, vertex_edges[i]);
 }
@@ -240,22 +243,54 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id
 
 DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u16 level, float threshold)
 {
-    if (threshold > 1.0f)
-        threshold = 1.0f;
-    else if (threshold < 0.0f)
-        threshold = 0.0f;
-
     if (level == 0)
         return duplicate_gphrx(graph);
+    
+    if (threshold > 1.0f)
+        threshold = 1.0f;
+    else if (threshold <= 0.0f)
+        threshold = 0.000001f;
 
     size_t partition_size = fast_div_pow_2(graph->highest_vertex_id, level);
     
-    if (partition_size == 0)
-        partition_size = 1;
+    if (partition_size >= graph->highest_vertex_id)
+        partition_size = graph->highest_vertex_id / 2;
 
-    // TODO
+    // NOTE: This makes the approximation by using a binary tree representation of the column vectors
+    //       in the adjacency_matrix. This could also be done using the row vectors, but the column
+    //       index list is sorted in the GphrxGraph whereas the row index list is not.
+
+    size_t estimated_approx_adj_matrix_size =
+        fast_div_pow_2(graph->adjacency_matrix.matrix_row_idx_list.size, level);
+    
+    CsrAdjMatrix approx_adj_matrix = {
+        .matrix_col_idx_list = new_dynarr_u64_with_capacity(estimated_approx_adj_matrix_size),
+        .matrix_row_idx_list = new_dynarr_u64_with_capacity(estimated_approx_adj_matrix_size),
+    };
+
+    GphrxGraph approx_graph = {
+        .is_undirected = graph->is_undirected,
+        .highest_vertex_id = 0,
+        .adjacency_matrix = approx_adj_matrix,
+    };
+
+    u64 current_partition_max = partition_size - 1;
 
 
+    // Loop over the col list in the matrix_col_idx_list. Each sequence of the same vertex_id represents a column
+    // in the adjacency_matrix (not all columns are represented in the list if not all the vertices have edges).
+    // Go through each column (each sequence of the same number) and use the associated vertex_id from the
+    // matrix_row_idx_list to see how many nodes are in each partition. Perhaps create "buckets," an
+    // array that keeps track of the count of each vertex_id associated with the current sequence value.
+    // Each index of the array will become a 1 or a 0 in the resulting column vector of the adjacency matrix,
+    // depending on whether the count in the array meets the threshold provided by the user. For each array value
+    // that meets the threshold, create an edge in the approx_graph with col = sequence value and row = array idx.
+
+    
+    
+    // TODO: Figure out what the highest_vertex_id would be for the approximated graph. Will it always be the
+    //       same as partition_size?
+    
     return duplicate_gphrx(graph);
 }
 
