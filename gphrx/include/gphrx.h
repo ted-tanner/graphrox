@@ -14,12 +14,8 @@
 //       together to form the entry in the approximated matrix.
 
 // TODO: Functions
-//         - Free both Csr Matrix Types
-//         - Get an occurrence matrix
+//         - Get from matrix (give col and row, return entry)
 //         - Scale an approximation given a threshold and scale factor
-//         - Generate full adjacency matrix
-//         - Generate full weighted matrix
-//         - Estimate size of adjacency matrix in kb
 
 /** Error codes */
 typedef u8 GphrxErrorCode;
@@ -47,7 +43,6 @@ typedef struct {
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
 typedef struct {
-    size_t dimension;
     DynamicArrayU64 col_indices;
     DynamicArrayU64 row_indices;
 } GphrxCsrAdjacencyMatrix;

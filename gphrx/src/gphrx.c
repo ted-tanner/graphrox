@@ -139,10 +139,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
         u64 row = dynarr_u64_get(&matrix->row_indices, i);
         double entry = dynarr_dbl_get(&matrix->entries, i);
 
-        if (row == 0)
-            pos = extra_chars_per_row_at_front + chars_per_entry * col;
-        else
-            pos = (row - 1) * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
+        pos = row * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
         
         sprintf(buffer + pos, "%*.*f", entry_size, decimal_digits, entry);
         if (col != 0 && col % (dimension - 1) == 0)
@@ -201,10 +198,7 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
         u64 col = dynarr_u64_get(&matrix->col_indices, i);
         u64 row = dynarr_u64_get(&matrix->row_indices, i);
 
-        if (row == 0)
-            pos = extra_chars_per_row_at_front + chars_per_entry * col;
-        else
-            pos = (row - 1) * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
+        pos = row * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
 
         buffer[pos] = '1';
     }
@@ -253,23 +247,26 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
                               u64 from_vertex_id, u64 to_vertex_id)
 {
     size_t curr_idx = index_of_edge(col_arr, from_vertex_id);
-
+    
     u64 curr_idx_temp = curr_idx;
     for (; curr_idx >= 0; --curr_idx)
     {
-        if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id)
+        if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id || curr_idx == 0)
             break;
         if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
             return curr_idx;
     }
 
     curr_idx = curr_idx_temp;
-    for (; curr_idx < row_arr->size; ++curr_idx)
+    if (row_arr->size != 0)
     {
-        if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id)
-            break;
-        if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
-            return curr_idx;
+        for (; curr_idx < row_arr->size; ++curr_idx)
+        {
+            if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id)
+                break;
+            if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
+                return curr_idx;
+        }
     }
 
     return curr_idx;
@@ -345,16 +342,16 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
         : index_of_vertex(&graph->adjacency_matrix.col_indices,
                           &graph->adjacency_matrix.row_indices,
                           from_vertex_id, to_vertex_id);
-
+    
     dynarr_u64_push_at(&graph->adjacency_matrix.col_indices, from_vertex_id, vertex_idx);
     dynarr_u64_push_at(&graph->adjacency_matrix.row_indices, to_vertex_id, vertex_idx);
-
-    if (graph->is_undirected)
+    
+    if (graph->is_undirected && from_vertex_id != to_vertex_id)
     {
         size_t vertex_idx = index_of_vertex(&graph->adjacency_matrix.col_indices,
                                             &graph->adjacency_matrix.row_indices,
                                             to_vertex_id, from_vertex_id);
-        
+
         dynarr_u64_push_at(&graph->adjacency_matrix.col_indices, to_vertex_id, vertex_idx);
         dynarr_u64_push_at(&graph->adjacency_matrix.row_indices, from_vertex_id, vertex_idx);
     }
@@ -411,13 +408,15 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
 
     u64 *restrict occurrences = calloc(block_count, sizeof(u64));
 
-    double blocks_per_row_by_dimension = blocks_per_row / (double) block_dimension;
     for (size_t i = 0; i < graph->adjacency_matrix.col_indices.size; ++i)
     {
         u64 col = dynarr_u64_get(&graph->adjacency_matrix.col_indices, i);
         u64 row = dynarr_u64_get(&graph->adjacency_matrix.row_indices, i);
 
-        size_t occurrences_pos = row * blocks_per_row_by_dimension + col / block_dimension;
+        u64 col_pos = col / block_dimension;
+        u64 row_pos = row / block_dimension;
+
+        size_t occurrences_pos = row_pos * blocks_per_row + col_pos;
         ++occurrences[occurrences_pos];
     }
 
@@ -1098,7 +1097,7 @@ static TEST_RESULT test_gphrx_add_edge()
 static TEST_RESULT test_gphrx_remove_edge()
 {
     GphrxErrorCode error = 0;
-    
+
     GphrxGraph undirected_graph = new_undirected_gphrx();
     gphrx_add_edge(&undirected_graph, 100, 5);
 
@@ -1193,24 +1192,33 @@ static TEST_RESULT test_gphrx_remove_edge()
 
 static TEST_RESULT test_approximate_gphrx()
 {
-    u64 to_edges_7[] = {3, 2, 11, 12, 9};
-    u64 to_edges_3[] = {1, 4, 11, 12, 5};
+    // u64 to_edges_7[] = {3, 2, 11, 12, 9};
+    // u64 to_edges_3[] = {1, 4, 11, 12, 5};
+    
+    // GphrxGraph undirected_graph = new_undirected_gphrx();
+
+    // gphrx_add_edge(&undirected_graph, 0, 0);
+    // gphrx_add_edge(&undirected_graph, 1, 9);
+    // gphrx_add_vertex(&undirected_graph, 7, to_edges_7, 5);
+    // gphrx_add_vertex(&undirected_graph, 3, to_edges_3, 5);    
+    // gphrx_add_edge(&undirected_graph, 10, 6);
+    // gphrx_add_edge(&undirected_graph, 10, 7);
+    
+    u64 to_edges_1[] = {0, 2, 4, 7, 3};
+    u64 to_edges_5[] = {6, 8, 0, 1, 5, 4, 2};
     
     GphrxGraph undirected_graph = new_undirected_gphrx();
 
-    gphrx_add_edge(&undirected_graph, 0, 0);
-    gphrx_add_edge(&undirected_graph, 1, 9);
-    gphrx_add_vertex(&undirected_graph, 7, to_edges_7, 5);
-    gphrx_add_vertex(&undirected_graph, 3, to_edges_3, 5);    
-    gphrx_add_edge(&undirected_graph, 10, 6);
-    gphrx_add_edge(&undirected_graph, 10, 7);
+    gphrx_add_edge(&undirected_graph, 7, 8);
+    gphrx_add_vertex(&undirected_graph, 1, to_edges_1, 5);
+    gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
 
     char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix,
                                                                 undirected_graph.highest_vertex_id + 1);
     printf("%s\n", undir_adj_matrix_str);
     free(undir_adj_matrix_str);
 
-    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.001);
+    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 3, 0.001);
 
     char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix,
                                                                  approx_graph.highest_vertex_id + 1);
