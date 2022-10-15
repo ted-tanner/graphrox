@@ -126,7 +126,7 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
     }
 
     // End string
-    buffer[pos++] = 0;
+    buffer[pos] = 0;
 
     size_t chars_per_row = extra_chars_per_row_total + dimension * chars_per_entry;
 
@@ -136,9 +136,9 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
         u64 row = dynarr_u64_get(&matrix->row_indices, i);
 
         if (row == 0)
-            pos = extra_chars_per_row_at_front + chars_per_entry * col - chars_per_entry;
+            pos = extra_chars_per_row_at_front + chars_per_entry * col;
         else
-            pos = (row - 1) * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col - chars_per_entry;
+            pos = (row - 1) * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
 
         buffer[pos] = '1';
     }
@@ -340,7 +340,7 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
 
     bool are_edge_blocks_padded = !(vertex_count % block_dimension == 0);
     
-    u64 blocks_per_row = (graph->highest_vertex_id / block_dimension) + (are_edge_blocks_padded ? 0 : 1);
+    u64 blocks_per_row = (vertex_count / block_dimension) + (are_edge_blocks_padded ? 1 : 0);
     u64 block_count = blocks_per_row * blocks_per_row;
 
     u64 *restrict occurrences = calloc(block_count, sizeof(u64));
@@ -397,7 +397,7 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, d
 
     bool are_edge_blocks_padded = !(vertex_count % block_dimension == 0);
     
-    u64 blocks_per_row = (graph->highest_vertex_id / block_dimension) + (are_edge_blocks_padded ? 0 : 1);
+    u64 blocks_per_row = (vertex_count / block_dimension) + (are_edge_blocks_padded ? 1 : 0);
     u64 block_count = blocks_per_row * blocks_per_row;
     
     if (threshold > 1.0f)
@@ -414,7 +414,7 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, d
 
     GphrxGraph approx_graph = {
         .is_undirected = graph->is_undirected,
-        .highest_vertex_id = graph->highest_vertex_id / block_dimension,
+        .highest_vertex_id = vertex_count / block_dimension,
         .adjacency_matrix = approx_adj_matrix,
     };
 
@@ -1131,7 +1131,8 @@ static TEST_RESULT test_approximate_gphrx()
     u64 to_edges_3[] = {1, 4, 11, 12, 5};
     
     GphrxGraph undirected_graph = new_undirected_gphrx();
-    
+
+    gphrx_add_edge(&undirected_graph, 0, 0);
     gphrx_add_edge(&undirected_graph, 1, 9);
     gphrx_add_vertex(&undirected_graph, 7, to_edges_7, 5);
     gphrx_add_vertex(&undirected_graph, 3, to_edges_3, 5);    
@@ -1139,14 +1140,17 @@ static TEST_RESULT test_approximate_gphrx()
     gphrx_add_edge(&undirected_graph, 10, 7);
 
     char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix,
-                                                                undirected_graph.highest_vertex_id);
+                                                                undirected_graph.highest_vertex_id + 1);
     printf("%s\n", undir_adj_matrix_str);
     free(undir_adj_matrix_str);
 
-    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 3, 0.4);
+    // TODO: Params (&undirected_graph, 3, 0.001) should fill out bottom of undir graph, but do not
+    // TODO: Params (&undirected_graph, 2, 0.001) should fill out bottom of undir graph, but do not
+    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.001);
 
     char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix,
-                                                                 approx_graph.highest_vertex_id);
+                                                                 approx_graph.highest_vertex_id + 1);
+
     printf("%s", approx_adj_matrix_str);
     free(approx_adj_matrix_str);
 
