@@ -105,7 +105,7 @@ DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix);
 /**
  * Converts the given GphrxCsrMatrix to a string representation.
  */
-DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension);
+DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension, int decimal_digits);
 
 /**
  * Converts the given GphrxCsrAdjacencyMatrix to a string representation.

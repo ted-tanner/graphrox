@@ -79,13 +79,79 @@ DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix)
 
 // TODO: Test
 // TODO: Add to Python (make sure to free memory)
-DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension)
+DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension, int decimal_digits)
 {
-    // TODO: Loop through entries and find the highest number. Determine the # of digits
-    // TODO: Remember to use exponents for extremely high values
-    // https://stackoverflow.com/questions/31331723/how-to-control-the-number-of-exponent-digits-after-e-in-c-printf-e
+    double highest = 0.0;
+    for (size_t i = 0; i < matrix->entries.size; ++i)
+    {
+        double curr = dynarr_dbl_get(&matrix->entries, i);
+        if (curr > highest)
+            highest = curr;
+    }
 
-    return 0;
+    int digit_count = 1;
+    for (double curr = highest; curr >= 10.0; curr /= 10, ++digit_count);
+
+    int entry_size = digit_count + 1 + decimal_digits;
+
+    const size_t extra_chars_per_row_at_front = 2; // '[ '
+    const size_t extra_chars_per_row_at_back = 3; // ']\r\n'
+    // Minus one to account for trailing comma being removed from final entry in row
+    const size_t extra_chars_per_row_total = extra_chars_per_row_at_front + extra_chars_per_row_at_back - 1;
+    size_t chars_per_entry = entry_size + 2; // number, comma, space
+
+    char *buffer = malloc(extra_chars_per_row_total * dimension +
+                          chars_per_entry * dimension * dimension +
+                          1); // 1 is for the terminating zero
+
+    size_t pos = 0;
+    for (u64 row = 0; row < dimension; ++row)
+    {
+        buffer[pos++] = '[';
+        buffer[pos++] = ' ';
+        
+        for (u64 col = 0; col < dimension - 1; ++col)
+        {
+            sprintf(buffer + pos, "%*.*f", entry_size, decimal_digits, 0.0);
+            pos += entry_size;
+            buffer[pos++] = ',';
+            buffer[pos++] = ' ';
+        }
+
+        // Last entry in row, without trailing comma
+        sprintf(buffer + pos, "%*.*f", entry_size, decimal_digits, 0.0);
+        pos += entry_size;
+        buffer[pos++] = ' ';
+        
+        buffer[pos++] = ']';
+        buffer[pos++] = '\r';
+        buffer[pos++] = '\n';
+    }
+
+    // End string
+    buffer[pos] = 0;
+
+    size_t chars_per_row = extra_chars_per_row_total + dimension * chars_per_entry;
+
+    for (size_t i = 0; i < matrix->col_indices.size; ++i)
+    {
+        u64 col = dynarr_u64_get(&matrix->col_indices, i);
+        u64 row = dynarr_u64_get(&matrix->row_indices, i);
+        double entry = dynarr_dbl_get(&matrix->entries, i);
+
+        if (row == 0)
+            pos = extra_chars_per_row_at_front + chars_per_entry * col;
+        else
+            pos = (row - 1) * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
+        
+        sprintf(buffer + pos, "%*.*f", entry_size, decimal_digits, entry);
+        if (col != 0 && col % (dimension - 1) == 0)
+            buffer[pos + entry_size] = ' ';
+        else 
+            buffer[pos + entry_size] = ',';
+    }
+
+    return buffer;
 }
 
 // TODO: Test
@@ -97,7 +163,7 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
     const size_t extra_chars_per_row_at_back = 3; // ']\r\n'
     // Minus one to account for trailing comma being removed from final entry in row
     const size_t extra_chars_per_row_total = extra_chars_per_row_at_front + extra_chars_per_row_at_back - 1;
-    const size_t chars_per_entry = 3; // comma, number, space
+    const size_t chars_per_entry = 3; // number, comma, space
 
     char *buffer = malloc(extra_chars_per_row_total * dimension +
                           chars_per_entry * dimension * dimension +
@@ -345,7 +411,7 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
 
     u64 *restrict occurrences = calloc(block_count, sizeof(u64));
 
-    u64 blocks_per_row_by_dimension = blocks_per_row / block_dimension;
+    double blocks_per_row_by_dimension = blocks_per_row / (double) block_dimension;
     for (size_t i = 0; i < graph->adjacency_matrix.col_indices.size; ++i)
     {
         u64 col = dynarr_u64_get(&graph->adjacency_matrix.col_indices, i);
@@ -414,7 +480,7 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, d
 
     GphrxGraph approx_graph = {
         .is_undirected = graph->is_undirected,
-        .highest_vertex_id = vertex_count / block_dimension,
+        .highest_vertex_id = graph->highest_vertex_id / block_dimension,
         .adjacency_matrix = approx_adj_matrix,
     };
 
@@ -1144,8 +1210,6 @@ static TEST_RESULT test_approximate_gphrx()
     printf("%s\n", undir_adj_matrix_str);
     free(undir_adj_matrix_str);
 
-    // TODO: Params (&undirected_graph, 3, 0.001) should fill out bottom of undir graph, but do not
-    // TODO: Params (&undirected_graph, 2, 0.001) should fill out bottom of undir graph, but do not
     GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.001);
 
     char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix,
