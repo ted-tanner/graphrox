@@ -1166,6 +1166,9 @@ static TEST_RESULT test_gphrx_remove_edge()
     error = gphrx_remove_edge(&directed_graph, 9, 996);
     assert(error == GPHRX_NO_ERROR, "Edge not found");
 
+    error = gphrx_remove_edge(&directed_graph, 9, 938);
+    assert(error == GPHRX_ERROR_NOT_FOUND, "Edge found that does not exist");
+
     assert(directed_graph.adjacency_matrix.col_indices.size == 3, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 3, "Incorrect adjacency matrix");
 
@@ -1218,21 +1221,13 @@ static TEST_RESULT test_approximate_gphrx()
     printf("%s\n", undir_adj_matrix_str);
     free(undir_adj_matrix_str);
 
-    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 3, 0.001);
+    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.4);
 
     char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix,
                                                                  approx_graph.highest_vertex_id + 1);
 
     printf("%s", approx_adj_matrix_str);
     free(approx_adj_matrix_str);
-
-    printf("\n");
-    for (int i = 0; i < approx_graph.adjacency_matrix.col_indices.size; ++i)
-    {
-        printf("%lld-%lld, ", approx_graph.adjacency_matrix.col_indices.arr[i],
-               approx_graph.adjacency_matrix.row_indices.arr[i]);
-    }
-    printf("\n");
 
     free_gphrx(&undirected_graph);
     
