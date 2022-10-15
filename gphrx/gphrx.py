@@ -16,8 +16,8 @@ class _DynamicArrayU64_c(ctypes.Structure):
     
 class _CsrAdjMatrix_c(ctypes.Structure):
     _fields_ = [
-        ("matrix_col_idx_list", _DynamicArrayU64_c),
-        ("matrix_row_idx_list", _DynamicArrayU64_c)]
+        ("col_idx_list", _DynamicArrayU64_c),
+        ("row_idx_list", _DynamicArrayU64_c)]
 
     
 class _GphrxGraph_c(ctypes.Structure):
@@ -121,7 +121,10 @@ class GphrxGraph:
 
         graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
         graph.highest_vertex_id = c_graph.highest_vertex_id
+        
+        _gphrx_lib.free_gphrx(graph._graph)
         graph._graph = c_graph
+        
         return graph
 
     def duplicate(self):
@@ -129,6 +132,8 @@ class GphrxGraph:
         
         graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
         graph.highest_vertex_id = c_graph.highest_vertex_id
+
+        _gphrx_lib.free_gphrx(graph._graph)
         graph._graph = c_graph
 
         return graph

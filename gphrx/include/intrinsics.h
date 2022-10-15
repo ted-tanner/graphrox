@@ -21,6 +21,7 @@ typedef unsigned char byte;
 #define fast_mod_pow_2(operand1, operand2) ((operand1) & ((operand2) - 1))
 #define fast_mult_pow_2(operand, pow) ((operand) << (pow))
 #define fast_div_pow_2(operand, pow) ((operand) >> (pow))
+#define fast_pow_2(pow) (2 << ((pow) - 1)) 
 
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline

@@ -9,11 +9,16 @@
 #include "dynarray.h"
 #include "intrinsics.h"
 
-// TODO: Functions
-//         - Get height of tree
-//         - Set highest vertex id (need to keep track of what the highest vertex id
-//           the user has set is to know whether to decrement in remove_vertex)
+// TODO: In separate file, create a GphrxWeightedGraph struct and wgphrx_* functions. For
+//       approximation, the entries in the approximated GphrxWeightedGraph will be averaged
+//       together to form the entry in the approximated matrix.
 
+// TODO: Functions
+//         - Get an occurrence matrix
+//         - Scale an approximation given a threshold and scale factor
+//         - Generate full adjacency matrix
+//         - Generate full weighted matrix
+//         - Estimate size of adjacency matrix in kb
 
 /** Error codes */
 typedef u8 GphrxErrorCode;
@@ -21,7 +26,6 @@ typedef u8 GphrxErrorCode;
 #define GPHRX_NO_ERROR 0
 #define GPHRX_ERROR_NOT_FOUND 1
 #define GPHRX_ERROR_INVALID_FORMAT 2
-
 
 /**
  * Header for byte array representation of a GphrxGraph.
@@ -38,14 +42,22 @@ typedef struct {
     u8 is_weighted;
 } GphrxByteArrayHeader;
 
-
 /**
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
 typedef struct {
-    DynamicArrayU64 matrix_col_idx_list;
-    DynamicArrayU64 matrix_row_idx_list; 
+    DynamicArrayU64 col_idx_list;
+    DynamicArrayU64 row_idx_list; 
 } CsrAdjMatrix;
+
+/**
+ * Compress Space Row formatted matrix stored with dynamic arrays.
+ */
+typedef struct {
+    DynamicArrayDouble weights_list;
+    DynamicArrayU64 col_idx_list;
+    DynamicArrayU64 row_idx_list; 
+} CsrWeightMatrix;
 
 /**
  * Metadata and representation of a graph.
@@ -114,14 +126,17 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id
 /**
  * Generates an approximation of a graph. This is where the magic of GraphRox happens.
  *
- * @param level is the height in the approxmation tree representation of each columnin the adjacency
- * matrix. Increasing the level by one will cut the size of the approximated graph roughly in half.
+ * @param block_dimension determines the size of the blocks in the adjacency matrix that the threshold
+ * will be applied to in the graph approximation. With a block size of 3, for example, the adjacency
+ * matrix will be partitioned into 3x3 blocks. If the percentage of non-zero entries in the block
+ * meets the threshold, the block will be represented by a one in the approximated adjacency matrix.
+ * Blocks on the edge of the adjacency matrix will be zero-padded to form a block of full dimension for
+ * the approximation.
  *
- * @param threshold is the percentage of entries in a section of an adjacency matrix column that must be
- * 1 rather than 0 at the provided level for the approximated adjacency matrix to represent to section
- * with a 1. The value is expected to be between 0 and 1.
+ * @param threshold is the percentage of entries in a block that must be non-zero for the block to be
+ * represented by a one in the approximated adjacency matrix.
  */
-DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u16 level, float threshold);
+DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, double threshold);
 
 /**
  * Converts the given GphrxGraph to a big-endian byte array representation.
