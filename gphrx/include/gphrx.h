@@ -14,6 +14,7 @@
 //       together to form the entry in the approximated matrix.
 
 // TODO: Functions
+//         - Free both Csr Matrix Types
 //         - Get an occurrence matrix
 //         - Scale an approximation given a threshold and scale factor
 //         - Generate full adjacency matrix
@@ -46,18 +47,20 @@ typedef struct {
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
 typedef struct {
-    DynamicArrayU64 col_idx_list;
-    DynamicArrayU64 row_idx_list; 
-} CsrAdjMatrix;
+    size_t dimension;
+    DynamicArrayU64 col_indices;
+    DynamicArrayU64 row_indices;
+} GphrxCsrAdjacencyMatrix;
 
+// TODO: Add to Python
 /**
  * Compress Space Row formatted matrix stored with dynamic arrays.
  */
 typedef struct {
-    DynamicArrayDouble weights_list;
-    DynamicArrayU64 col_idx_list;
-    DynamicArrayU64 row_idx_list; 
-} CsrWeightMatrix;
+    DynamicArrayDouble entries;
+    DynamicArrayU64 col_indices;
+    DynamicArrayU64 row_indices; 
+} GphrxCsrMatrix;
 
 /**
  * Metadata and representation of a graph.
@@ -65,7 +68,7 @@ typedef struct {
 typedef struct {
     bool is_undirected;
     u64 highest_vertex_id;
-    CsrAdjMatrix adjacency_matrix;
+    GphrxCsrAdjacencyMatrix adjacency_matrix;
 } GphrxGraph;
 
 
@@ -85,9 +88,29 @@ DLLEXPORT GphrxGraph new_directed_gphrx();
 DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph);
 
 /**
- * Frees the memory used by a given graph.
+ * Frees the memory used by the given graph.
  */
 DLLEXPORT void free_gphrx(GphrxGraph *graph);
+
+/**
+ * Frees the memory used by the given GphrxCsrMatrix.
+ */
+DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *matrix);
+
+/**
+ * Frees the memory used by the given GphrxCsrAdjacencyMatrix.
+ */
+DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix);
+
+/**
+ * Converts the given GphrxCsrMatrix to a string representation.
+ */
+DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension);
+
+/**
+ * Converts the given GphrxCsrAdjacencyMatrix to a string representation.
+ */
+DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, u64 dimension);
 
 /**
  * Frees up excess memory used by the lists that describe the graph. This can substantially reduce memory
@@ -122,6 +145,13 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
  * significant when the graph is directed.
  */
 DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+
+/**
+ * Returns an occurrence matrix for a given graph given a block dimension. The block_dimension parameter
+ * determines the size of the blocks the graph's adjacency matrix will be split into to generate the
+ * occurrence matrix. See the documentation for the approximate_gphrx function for more information.
+ */
+DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 block_dimension);
 
 /**
  * Generates an approximation of a graph. This is where the magic of GraphRox happens.

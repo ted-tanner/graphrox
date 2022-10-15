@@ -836,7 +836,6 @@ ModuleTestSet dynarray_h_register_tests()
     register_test(&set, test_dynarr_dbl_push_multiple);
     register_test(&set, test_dynarr_dbl_remove_at);
 
-
     return set;
 }
 

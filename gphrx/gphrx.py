@@ -7,6 +7,9 @@ import platform
 import sys
 
 
+# TODO: Approximation methods
+
+
 class _DynamicArrayU64_c(ctypes.Structure):
     _fields_ = [
         ("capacity", ctypes.c_size_t),
@@ -14,17 +17,17 @@ class _DynamicArrayU64_c(ctypes.Structure):
         ("arr", ctypes.POINTER(ctypes.c_uint64))]
 
     
-class _CsrAdjMatrix_c(ctypes.Structure):
+class _GphrxCsrAdjacencyMatrix_c(ctypes.Structure):
     _fields_ = [
-        ("col_idx_list", _DynamicArrayU64_c),
-        ("row_idx_list", _DynamicArrayU64_c)]
+        ("col_indices", _DynamicArrayU64_c),
+        ("row_indices", _DynamicArrayU64_c)]
 
     
 class _GphrxGraph_c(ctypes.Structure):
     _fields_ = [
         ("is_undirected", ctypes.c_bool),
         ("highest_vertex_id", ctypes.c_uint64),
-        ("adjacency_matrix", _CsrAdjMatrix_c)]
+        ("adjacency_matrix", _GphrxCsrAdjacencyMatrix_c)]
 
 
 class _GphrxErrorCode(Enum):
