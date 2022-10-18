@@ -99,8 +99,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
     size_t chars_per_entry = entry_size + 2; // number, comma, space
 
     char *buffer = malloc(extra_chars_per_row_total * dimension +
-                          chars_per_entry * dimension * dimension +
-                          1); // 1 is for the terminating zero
+                          chars_per_entry * dimension * dimension);
 
     size_t pos = 0;
     for (u64 row = 0; row < dimension; ++row)
@@ -126,8 +125,9 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
         buffer[pos++] = '\n';
     }
 
-    // End string
-    buffer[pos] = 0;
+    // Chop off the last two chars (\r\n) in the string. There will be an extra two bytes allocated to the
+    // buffer, but that is okay.
+    buffer[pos - 2] = 0;
 
     size_t chars_per_row = extra_chars_per_row_total + dimension * chars_per_entry;
 
@@ -160,8 +160,7 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
     const size_t chars_per_entry = 3; // number, comma, space
 
     char *buffer = malloc(extra_chars_per_row_total * dimension +
-                          chars_per_entry * dimension * dimension +
-                          1); // 1 is for the terminating zero
+                          chars_per_entry * dimension * dimension);
 
     size_t pos = 0;
     for (u64 row = 0; row < dimension; ++row)
@@ -186,8 +185,9 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
         buffer[pos++] = '\n';
     }
 
-    // End string
-    buffer[pos] = 0;
+    // Chop off the last two chars (\r\n) in the string. There will be an extra two bytes allocated to the
+    // buffer, but that is okay.
+    buffer[pos - 2] = 0;
 
     size_t chars_per_row = extra_chars_per_row_total + dimension * chars_per_entry;
 
@@ -811,7 +811,7 @@ static TEST_RESULT test_gphrx_csr_matrix_to_string()
     GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 3);
     char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 3, 3);
 
-    char *expected_str = "[ 0.778, 0.222, 0.111 ]\r\n[ 0.222, 0.222, 0.000 ]\r\n[ 0.111, 0.000, 0.111 ]\r\n";
+    char *expected_str = "[ 0.778, 0.222, 0.111 ]\r\n[ 0.222, 0.222, 0.000 ]\r\n[ 0.111, 0.000, 0.111 ]";
     assert(strcmp(occurrence_matrix_str, expected_str) == 0, "CSR matrix string does not match expected");
 
     free_gphrx_byte_array(occurrence_matrix_str);
@@ -836,7 +836,7 @@ static TEST_RESULT test_gphrx_csr_adj_matrix_to_string()
     char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix,
                                                                 undirected_graph.highest_vertex_id + 1);
 
-    char *expected_str = "[ 0, 1, 1, 0 ]\r\n[ 1, 1, 1, 1 ]\r\n[ 1, 1, 0, 1 ]\r\n[ 0, 1, 1, 0 ]\r\n";
+    char *expected_str = "[ 0, 1, 1, 0 ]\r\n[ 1, 1, 1, 1 ]\r\n[ 1, 1, 0, 1 ]\r\n[ 0, 1, 1, 0 ]";
     assert(strcmp(undir_adj_matrix_str, expected_str) == 0, "Adjacency matrix string does not match expected");
     
 
@@ -1300,7 +1300,7 @@ static TEST_RESULT test_approximate_gphrx()
 
     char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix,
                                                                 undirected_graph.highest_vertex_id + 1);
-    printf("%s\n", undir_adj_matrix_str);
+    printf("%s\n\n", undir_adj_matrix_str);
     free(undir_adj_matrix_str);
 
     GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.4);
