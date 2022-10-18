@@ -60,7 +60,6 @@ DLLEXPORT void free_gphrx(GphrxGraph *graph)
     free_gphrx_csr_adj_matrix(&graph->adjacency_matrix);
 }
 
-// TODO: Test
 // TODO: Add to Python
 DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *matrix)
 {
@@ -69,7 +68,6 @@ DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *matrix)
     free_dynarr_u64(&matrix->row_indices);
 }
 
-// TODO: Test
 // TODO: Add to Python
 DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix)
 {
@@ -151,7 +149,6 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
     return buffer;
 }
 
-// TODO: Test
 // TODO: Add to Python (make sure to free memory)
 DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, u64 dimension)
 {
@@ -184,6 +181,7 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
         buffer[pos++] = ' ';
         
         buffer[pos++] = ']';
+
         buffer[pos++] = '\r';
         buffer[pos++] = '\n';
     }
@@ -755,11 +753,95 @@ static TEST_RESULT test_duplicate_gphrx()
 static TEST_RESULT test_free_gphrx()
 {
     GphrxGraph undirected_graph = new_undirected_gphrx();
-    GphrxGraph directed_graph = new_directed_gphrx();
 
+    gphrx_add_edge(&undirected_graph, 1, 2);
+    gphrx_add_edge(&undirected_graph, 3, 2);
+    gphrx_add_edge(&undirected_graph, 3, 1);
+    gphrx_add_edge(&undirected_graph, 4, 3);
+    gphrx_add_edge(&undirected_graph, 4, 2);
+    gphrx_add_edge(&undirected_graph, 100, 10000);
+    
     // Verify no segmentation fault
     free_gphrx(&undirected_graph);
-    free_gphrx(&directed_graph);
+
+    return TEST_PASS;
+}
+
+static TEST_RESULT test_free_gphrx_csr_matrix()
+{
+    GphrxCsrMatrix matrix = {
+        .entries = new_dynarr_dbl_with_capacity(100),
+        .col_indices = new_dynarr_u64_with_capacity(150),
+        .row_indices = new_dynarr_u64_with_capacity(125),
+    };
+
+    // Verify no segmentation fault
+    free_gphrx_csr_matrix(&matrix);
+    
+    return TEST_PASS;
+}
+
+static TEST_RESULT test_free_gphrx_csr_adj_matrix()
+{
+    GphrxCsrAdjacencyMatrix matrix = {
+        .col_indices = new_dynarr_u64_with_capacity(100),
+        .row_indices = new_dynarr_u64_with_capacity(10),
+    };
+
+    // Verify no segmentation fault
+    free_gphrx_csr_adj_matrix(&matrix);
+
+    return TEST_PASS;
+}
+
+static TEST_RESULT test_gphrx_csr_matrix_to_string()
+{
+    GphrxGraph undirected_graph = new_undirected_gphrx();
+
+    gphrx_add_edge(&undirected_graph, 0, 1);
+    gphrx_add_edge(&undirected_graph, 1, 1);
+    gphrx_add_edge(&undirected_graph, 2, 1);
+    gphrx_add_edge(&undirected_graph, 2, 0);
+    gphrx_add_edge(&undirected_graph, 3, 2);
+    gphrx_add_edge(&undirected_graph, 3, 1);
+    gphrx_add_edge(&undirected_graph, 3, 4);
+    gphrx_add_edge(&undirected_graph, 0, 6);
+    gphrx_add_edge(&undirected_graph, 6, 6);
+    
+    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 3);
+    char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 3, 3);
+
+    char *expected_str = "[ 0.778, 0.222, 0.111 ]\r\n[ 0.222, 0.222, 0.000 ]\r\n[ 0.111, 0.000, 0.111 ]\r\n";
+    assert(strcmp(occurrence_matrix_str, expected_str) == 0, "CSR matrix string does not match expected");
+
+    free_gphrx_byte_array(occurrence_matrix_str);
+
+    free_gphrx_csr_matrix(&occurrence_matrix);
+    free_gphrx(&undirected_graph);
+
+    return TEST_PASS;
+}
+
+static TEST_RESULT test_gphrx_csr_adj_matrix_to_string()
+{
+    GphrxGraph undirected_graph = new_undirected_gphrx();
+
+    gphrx_add_edge(&undirected_graph, 0, 1);
+    gphrx_add_edge(&undirected_graph, 1, 1);
+    gphrx_add_edge(&undirected_graph, 2, 1);
+    gphrx_add_edge(&undirected_graph, 2, 0);
+    gphrx_add_edge(&undirected_graph, 3, 2);
+    gphrx_add_edge(&undirected_graph, 3, 1);
+
+    char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix,
+                                                                undirected_graph.highest_vertex_id + 1);
+
+    char *expected_str = "[ 0, 1, 1, 0 ]\r\n[ 1, 1, 1, 1 ]\r\n[ 1, 1, 0, 1 ]\r\n[ 0, 1, 1, 0 ]\r\n";
+    assert(strcmp(undir_adj_matrix_str, expected_str) == 0, "Adjacency matrix string does not match expected");
+    
+
+    free_gphrx_byte_array(undir_adj_matrix_str);
+    free_gphrx(&undirected_graph);
 
     return TEST_PASS;
 }
@@ -1325,6 +1407,10 @@ ModuleTestSet gphrx_h_register_tests()
     register_test(&set, test_new_gphrx);
     register_test(&set, test_duplicate_gphrx);
     register_test(&set, test_free_gphrx);
+    register_test(&set, test_free_gphrx_csr_matrix);
+    register_test(&set, test_free_gphrx_csr_adj_matrix);
+    register_test(&set, test_gphrx_csr_matrix_to_string);
+    register_test(&set, test_gphrx_csr_adj_matrix_to_string);
     register_test(&set, test_gphrx_shrink);
     register_test(&set, test_gphrx_does_edge_exist);
     register_test(&set, test_gphrx_add_vertex);
@@ -1337,4 +1423,5 @@ ModuleTestSet gphrx_h_register_tests()
     return set;
 }
 
-#endif 
+#endif
+ 

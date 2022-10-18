@@ -17,6 +17,8 @@
 //         - Get from matrix (give col and row, return entry)
 //         - Scale an approximation given a threshold and scale factor
 
+// TODO: Split matrices into their own files gphrx_matrix.h gphrx_matrix.c
+
 /** Error codes */
 typedef u8 GphrxErrorCode;
 
