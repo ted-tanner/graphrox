@@ -139,7 +139,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, int decimal_d
         pos = row * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
         
         sprintf(buffer + pos, "%*.*f", entry_size, decimal_digits, entry);
-        if (col != 0 && col % (matrix->dimension - 1) == 0)
+        if (matrix->dimension == 1 || (col != 0 && col % (matrix->dimension - 1) == 0))
             buffer[pos + entry_size] = ' ';
         else 
             buffer[pos + entry_size] = ',';
@@ -666,29 +666,6 @@ DLLEXPORT void free_gphrx_byte_array(void *arr)
 
 #ifdef TEST_MODE
 
-
-
-
-
-
-
-
-// TODO: Replace highest_vertex_id with adjacency_matrix.dimension in all tests. Be sure to check
-//       dimension is correct and gets updated when edges/vertices are added and when vertices are
-//       removed
-
-
-
-
-
-
-
-
-
-
-
-
-
 static TEST_RESULT test_new_gphrx()
 {
     GphrxGraph undirected_graph = new_undirected_gphrx();
@@ -840,6 +817,14 @@ static TEST_RESULT test_gphrx_csr_matrix_to_string()
     assert(strcmp(occurrence_matrix_str, expected_str) == 0, "CSR matrix string does not match expected");
 
     free_gphrx_byte_array(occurrence_matrix_str);
+
+    occurrence_matrix.entries.arr[2] = 500023.977;
+    char *matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
+
+    char *matrix_expected_str = "[      0.78,      0.22,      0.11 ]\r\n[      0.22,      0.22,      0.00 ]\r\n[ 500023.98,      0.00,      0.11 ]";
+    assert(strcmp(matrix_str, matrix_expected_str) == 0, "CSR matrix string does not match expected");
+
+    free_gphrx_byte_array(matrix_str);
 
     free_gphrx_csr_matrix(&occurrence_matrix);
     free_gphrx(&undirected_graph);
@@ -1326,13 +1311,13 @@ static TEST_RESULT test_gphrx_find_occurrence_matrix()
     u64 to_edges_1[] = {0, 2, 4, 7, 3};
     u64 to_edges_5[] = {6, 8, 0, 1, 5, 4, 2};
     
-    GphrxGraph undirected_graph = new_undirected_gphrx();
+    GphrxGraph undirected_graph = new_directed_gphrx();
     
     gphrx_add_edge(&undirected_graph, 7, 8);
     gphrx_add_vertex(&undirected_graph, 1, to_edges_1, 5);
     gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
     
-    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 9);
+    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 5);
     char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
 
     // TODO: Remove
@@ -1395,11 +1380,11 @@ static TEST_RESULT test_approximate_gphrx()
     printf("%s\n\n", undir_adj_matrix_str);
     free(undir_adj_matrix_str);
 
-    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.4);
+    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.3);
 
     char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix);
 
-    printf("%s", approx_adj_matrix_str);
+    printf("%s\n", approx_adj_matrix_str);
     free(approx_adj_matrix_str);
 
     free_gphrx(&undirected_graph);
@@ -1510,8 +1495,8 @@ ModuleTestSet gphrx_h_register_tests()
     register_test(&set, test_gphrx_remove_vertex);
     register_test(&set, test_gphrx_add_edge);
     register_test(&set, test_gphrx_remove_edge);
-    // register_test(&set, test_gphrx_find_occurrence_matrix);
-    // register_test(&set, test_approximate_gphrx);
+    register_test(&set, test_gphrx_find_occurrence_matrix);
+    register_test(&set, test_approximate_gphrx);
     register_test(&set, test_gphrx_to_from_byte_array);
 
     return set;

@@ -22,6 +22,8 @@
 
 // TODO: Split matrices into their own files gphrx_matrix.h gphrx_matrix.c
 
+// TODO: Should the occurrence matrix be renamed the "occurrence probability matrix"?
+
 /** Error codes */
 typedef u8 GphrxErrorCode;
 
