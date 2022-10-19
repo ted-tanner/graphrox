@@ -3,13 +3,13 @@
 static GphrxGraph new_gphrx(bool is_undirected)
 {
     GphrxCsrAdjacencyMatrix adjacency_matrix = {
+        .dimension = 0,
         .col_indices = new_dynarr_u64(),
         .row_indices = new_dynarr_u64(),
     };
     
     GphrxGraph graph = {
         .is_undirected = is_undirected,
-        .highest_vertex_id = 0,
         .adjacency_matrix = adjacency_matrix,
     };
 
@@ -31,6 +31,7 @@ DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph)
     size_t edge_count = graph->adjacency_matrix.col_indices.size;
         
     GphrxCsrAdjacencyMatrix adjacency_matrix = {
+        .dimension = graph->adjacency_matrix.dimension,
         .col_indices = new_dynarr_u64_with_capacity(edge_count),
         .row_indices = new_dynarr_u64_with_capacity(edge_count),
     };
@@ -48,7 +49,6 @@ DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph)
 
     GphrxGraph duplicate_graph = {
         .is_undirected = graph->is_undirected,
-        .highest_vertex_id = graph->highest_vertex_id,
         .adjacency_matrix = adjacency_matrix,
     };
 
@@ -75,9 +75,8 @@ DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix)
     free_dynarr_u64(&matrix->row_indices);
 }
 
-// TODO: Test
 // TODO: Add to Python (make sure to free memory)
-DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension, int decimal_digits)
+DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, int decimal_digits)
 {
     double highest = 0.0;
     for (size_t i = 0; i < matrix->entries.size; ++i)
@@ -98,16 +97,16 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
     const size_t extra_chars_per_row_total = extra_chars_per_row_at_front + extra_chars_per_row_at_back - 1;
     size_t chars_per_entry = entry_size + 2; // number, comma, space
 
-    char *buffer = malloc(extra_chars_per_row_total * dimension +
-                          chars_per_entry * dimension * dimension);
+    char *buffer = malloc(extra_chars_per_row_total * matrix->dimension +
+                          chars_per_entry * matrix->dimension * matrix->dimension);
 
     size_t pos = 0;
-    for (u64 row = 0; row < dimension; ++row)
+    for (u64 row = 0; row < matrix->dimension; ++row)
     {
         buffer[pos++] = '[';
         buffer[pos++] = ' ';
         
-        for (u64 col = 0; col < dimension - 1; ++col)
+        for (u64 col = 0; col < matrix->dimension - 1; ++col)
         {
             sprintf(buffer + pos, "%*.*f", entry_size, decimal_digits, 0.0);
             pos += entry_size;
@@ -129,7 +128,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
     // buffer, but that is okay.
     buffer[pos - 2] = 0;
 
-    size_t chars_per_row = extra_chars_per_row_total + dimension * chars_per_entry;
+    size_t chars_per_row = extra_chars_per_row_total + matrix->dimension * chars_per_entry;
 
     for (size_t i = 0; i < matrix->col_indices.size; ++i)
     {
@@ -140,7 +139,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
         pos = row * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
         
         sprintf(buffer + pos, "%*.*f", entry_size, decimal_digits, entry);
-        if (col != 0 && col % (dimension - 1) == 0)
+        if (col != 0 && col % (matrix->dimension - 1) == 0)
             buffer[pos + entry_size] = ' ';
         else 
             buffer[pos + entry_size] = ',';
@@ -150,7 +149,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension
 }
 
 // TODO: Add to Python (make sure to free memory)
-DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, u64 dimension)
+DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix)
 {
     // Each row of the matrix is represented like this: [ 0, 0, 1, 0, 1, 1, 0 ]
     const size_t extra_chars_per_row_at_front = 2; // '[ '
@@ -159,16 +158,16 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
     const size_t extra_chars_per_row_total = extra_chars_per_row_at_front + extra_chars_per_row_at_back - 1;
     const size_t chars_per_entry = 3; // number, comma, space
 
-    char *buffer = malloc(extra_chars_per_row_total * dimension +
-                          chars_per_entry * dimension * dimension);
+    char *buffer = malloc(extra_chars_per_row_total * matrix->dimension +
+                          chars_per_entry * matrix->dimension * matrix->dimension);
 
     size_t pos = 0;
-    for (u64 row = 0; row < dimension; ++row)
+    for (u64 row = 0; row < matrix->dimension; ++row)
     {
         buffer[pos++] = '[';
         buffer[pos++] = ' ';
         
-        for (u64 col = 0; col < dimension - 1; ++col)
+        for (u64 col = 0; col < matrix->dimension - 1; ++col)
         {
             buffer[pos++] = '0';
             buffer[pos++] = ',';
@@ -189,7 +188,7 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, 
     // buffer, but that is okay.
     buffer[pos - 2] = 0;
 
-    size_t chars_per_row = extra_chars_per_row_total + dimension * chars_per_entry;
+    size_t chars_per_row = extra_chars_per_row_total + matrix->dimension * chars_per_entry;
 
     for (size_t i = 0; i < matrix->col_indices.size; ++i)
     {
@@ -272,6 +271,9 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
 
 DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
 {
+    if (from_vertex_id > graph->adjacency_matrix.dimension || to_vertex_id > graph->adjacency_matrix.dimension)
+        return false;
+    
     size_t vertex_idx = index_of_vertex(&graph->adjacency_matrix.col_indices,
                                         &graph->adjacency_matrix.row_indices,
                                         from_vertex_id, to_vertex_id);
@@ -287,8 +289,8 @@ DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 
 
 DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count)
 {
-    if (vertex_id > graph->highest_vertex_id)
-        graph->highest_vertex_id = vertex_id;
+    if (vertex_id + 1 > graph->adjacency_matrix.dimension)
+        graph->adjacency_matrix.dimension = vertex_id + 1;
         
     for (u64 i = 0; i < vertex_edge_count; ++i)
         gphrx_add_edge(graph, vertex_id, vertex_edges[i]);
@@ -329,13 +331,13 @@ DLLEXPORT void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
         }
     }
 
-    if (vertex_id == graph->highest_vertex_id)
-        --graph->highest_vertex_id;
+    if (vertex_id + 1 == graph->adjacency_matrix.dimension)
+        --graph->adjacency_matrix.dimension;
 }
 
 DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
 {
-    size_t vertex_idx = from_vertex_id >= graph->highest_vertex_id
+    size_t vertex_idx = from_vertex_id >= graph->adjacency_matrix.dimension - 1
         ? graph->adjacency_matrix.col_indices.size
         : index_of_vertex(&graph->adjacency_matrix.col_indices,
                           &graph->adjacency_matrix.row_indices,
@@ -354,11 +356,11 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
         dynarr_u64_push_at(&graph->adjacency_matrix.row_indices, from_vertex_id, vertex_idx);
     }
 
-    if (from_vertex_id > graph->highest_vertex_id)
-        graph->highest_vertex_id = from_vertex_id;
+    if (from_vertex_id + 1 > graph->adjacency_matrix.dimension)
+        graph->adjacency_matrix.dimension = from_vertex_id + 1;
 
-    if (to_vertex_id > graph->highest_vertex_id)
-        graph->highest_vertex_id = to_vertex_id;
+    if (to_vertex_id + 1 > graph->adjacency_matrix.dimension)
+        graph->adjacency_matrix.dimension = to_vertex_id + 1;
 }
 
 DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
@@ -394,7 +396,7 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
     if (block_dimension < 1)
         block_dimension = 1;
 
-    u64 vertex_count = graph->highest_vertex_id + 1;
+    u64 vertex_count = graph->adjacency_matrix.dimension;
 
     if (block_dimension > vertex_count)
         block_dimension = vertex_count;
@@ -419,6 +421,7 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
     }
 
     GphrxCsrMatrix occurrence_matrix = {
+        .dimension = blocks_per_row,
         .entries = new_dynarr_dbl_with_capacity(block_count),
         .col_indices = new_dynarr_u64_with_capacity(block_count),
         .row_indices = new_dynarr_u64_with_capacity(block_count),
@@ -453,7 +456,7 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, d
     if (block_dimension <= 1 || graph->adjacency_matrix.col_indices.size <= 1)
         return duplicate_gphrx(graph);
 
-    u64 vertex_count = graph->highest_vertex_id + 1;
+    u64 vertex_count = graph->adjacency_matrix.dimension;
 
     if (block_dimension > vertex_count)
         block_dimension = vertex_count;
@@ -471,13 +474,13 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, d
     GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(graph, block_dimension);
 
     GphrxCsrAdjacencyMatrix approx_adj_matrix = {
+        .dimension = occurrence_matrix.dimension,
         .col_indices = new_dynarr_u64_with_capacity(block_count),
         .row_indices = new_dynarr_u64_with_capacity(block_count),
     };
 
     GphrxGraph approx_graph = {
         .is_undirected = graph->is_undirected,
-        .highest_vertex_id = graph->highest_vertex_id / block_dimension,
         .adjacency_matrix = approx_adj_matrix,
     };
 
@@ -502,8 +505,8 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph)
     GphrxByteArrayHeader header = {
         .magic_number = GPHRX_HEADER_MAGIC_NUMBER,
         .version = GPHRX_BYTE_ARRAY_VERSION,
-        .highest_vertex_id = graph->highest_vertex_id,
-        .adjacency_matrix_dimension = (u64) graph->adjacency_matrix.col_indices.size,
+        .adjacency_matrix_dimension = graph->adjacency_matrix.dimension,
+        .csr_adjacency_matrix_size = (u64) graph->adjacency_matrix.col_indices.size,
         .is_undirected = graph->is_undirected,
         .is_weighted = false,
     };
@@ -541,10 +544,10 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph)
         memcpy(buffer + pos, &temp_u32, sizeof(u32));
         pos += sizeof(u32);
 
-        u64 temp_u64 = u64_reverse_bits(graph->highest_vertex_id);
+        u64 temp_u64 = u64_reverse_bits((u64) graph->adjacency_matrix.dimension);
         memcpy(buffer + pos, &temp_u64, sizeof(u64));
         pos += sizeof(u64);
-
+        
         temp_u64 = u64_reverse_bits((u64) graph->adjacency_matrix.col_indices.size);
         memcpy(buffer + pos, &temp_u64, sizeof(u64));
         pos += sizeof(u64);
@@ -577,7 +580,6 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
     *error = GPHRX_NO_ERROR;
     GphrxGraph graph = {
         .is_undirected = 0,
-        .highest_vertex_id = 0,
         .adjacency_matrix = 0,
     };
     
@@ -599,10 +601,10 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
     memcpy(&header.version, arr + pos, sizeof(u32));
     pos += sizeof(u32);
 
-    memcpy(&header.highest_vertex_id, arr + pos, sizeof(u64));
+    memcpy(&header.adjacency_matrix_dimension, arr + pos, sizeof(u64));
     pos += sizeof(u64);
 
-    memcpy(&header.adjacency_matrix_dimension, arr + pos, sizeof(u64));
+    memcpy(&header.csr_adjacency_matrix_size, arr + pos, sizeof(u64));
     pos += sizeof(u64);
 
     memcpy(&header.is_undirected, arr + pos, sizeof(u8));
@@ -614,41 +616,40 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
     if (!is_system_big_endian())
     {
         header.version = u32_reverse_bits(header.version);
-        header.highest_vertex_id = u64_reverse_bits(header.highest_vertex_id);
         header.adjacency_matrix_dimension = u64_reverse_bits(header.adjacency_matrix_dimension);
+        header.csr_adjacency_matrix_size = u64_reverse_bits(header.csr_adjacency_matrix_size);
     }
 
     GphrxCsrAdjacencyMatrix adjacency_matrix = {
-        .col_indices = new_dynarr_u64_with_capacity(header.adjacency_matrix_dimension),
-        .row_indices = new_dynarr_u64_with_capacity(header.adjacency_matrix_dimension),
+        .col_indices = new_dynarr_u64_with_capacity(header.csr_adjacency_matrix_size),
+        .row_indices = new_dynarr_u64_with_capacity(header.csr_adjacency_matrix_size),
     };
     
     graph.is_undirected = header.is_undirected;
-    graph.highest_vertex_id = header.highest_vertex_id;
     graph.adjacency_matrix = adjacency_matrix;
 
-    graph.adjacency_matrix.col_indices.size = header.adjacency_matrix_dimension;
-    graph.adjacency_matrix.row_indices.size = header.adjacency_matrix_dimension;
+    graph.adjacency_matrix.dimension = header.adjacency_matrix_dimension;
+    graph.adjacency_matrix.col_indices.size = header.csr_adjacency_matrix_size;
+    graph.adjacency_matrix.row_indices.size = header.csr_adjacency_matrix_size;
 
     memcpy(graph.adjacency_matrix.col_indices.arr,
-               arr + pos,
-               header.adjacency_matrix_dimension * sizeof(u64));
-        
-    pos += header.adjacency_matrix_dimension * sizeof(u64);
+           arr + pos,
+           header.csr_adjacency_matrix_size * sizeof(u64));
+    pos += header.csr_adjacency_matrix_size * sizeof(u64);
     
     memcpy(graph.adjacency_matrix.row_indices.arr,
            arr + pos,
-           header.adjacency_matrix_dimension * sizeof(u64));
+           header.csr_adjacency_matrix_size * sizeof(u64));
 
     if (!is_system_big_endian())
     {
-        for (size_t i = 0; i < header.adjacency_matrix_dimension; ++i)
+        for (size_t i = 0; i < header.csr_adjacency_matrix_size; ++i)
         {
             graph.adjacency_matrix.col_indices.arr[i] =
                 u64_reverse_bits(graph.adjacency_matrix.col_indices.arr[i]);
         }
 
-        for (size_t i = 0; i < header.adjacency_matrix_dimension; ++i)
+        for (size_t i = 0; i < header.csr_adjacency_matrix_size; ++i)
         {
             graph.adjacency_matrix.row_indices.arr[i] =
                 u64_reverse_bits(graph.adjacency_matrix.row_indices.arr[i]);
@@ -665,6 +666,29 @@ DLLEXPORT void free_gphrx_byte_array(void *arr)
 
 #ifdef TEST_MODE
 
+
+
+
+
+
+
+
+// TODO: Replace highest_vertex_id with adjacency_matrix.dimension in all tests. Be sure to check
+//       dimension is correct and gets updated when edges/vertices are added and when vertices are
+//       removed
+
+
+
+
+
+
+
+
+
+
+
+
+
 static TEST_RESULT test_new_gphrx()
 {
     GphrxGraph undirected_graph = new_undirected_gphrx();
@@ -673,13 +697,12 @@ static TEST_RESULT test_new_gphrx()
     assert(undirected_graph.is_undirected, "Incorrect graph metadata");
     assert(!directed_graph.is_undirected, "Incorrect graph metadata");
 
-    assert(undirected_graph.highest_vertex_id == 0, "Incorrect graph metadata");
-    assert(directed_graph.highest_vertex_id == 0, "Incorrect graph metadata");
-
     assert(undirected_graph.adjacency_matrix.col_indices.size == 0, "Incorrect initial adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 0, "Incorrect initial adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.dimension == 0, "Incorrect initial adjacency matrix");
     assert(directed_graph.adjacency_matrix.col_indices.size == 0, "Incorrect initial adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 0, "Incorrect initial adjacency matrix");
+    assert(directed_graph.adjacency_matrix.dimension == 0, "Incorrect initial adjacency matrix");
 
     free_gphrx(&undirected_graph);
     free_gphrx(&directed_graph);
@@ -704,7 +727,7 @@ static TEST_RESULT test_duplicate_gphrx()
     GphrxGraph dup_directed_graph = duplicate_gphrx(&directed_graph);
 
     assert(undirected_graph.is_undirected == dup_undirected_graph.is_undirected, "Graph was incorrectly duplicated");
-    assert(undirected_graph.highest_vertex_id == dup_undirected_graph.highest_vertex_id,
+    assert(undirected_graph.adjacency_matrix.dimension == dup_undirected_graph.adjacency_matrix.dimension,
            "Graph was incorrectly duplicated");
     assert(undirected_graph.adjacency_matrix.col_indices.size ==
            dup_undirected_graph.adjacency_matrix.col_indices.size, "Graph was incorrectly duplicated");
@@ -712,7 +735,7 @@ static TEST_RESULT test_duplicate_gphrx()
            dup_undirected_graph.adjacency_matrix.row_indices.size, "Graph was incorrectly duplicated");
 
     assert(directed_graph.is_undirected == dup_directed_graph.is_undirected, "Graph was incorrectly duplicated");
-    assert(directed_graph.highest_vertex_id == dup_directed_graph.highest_vertex_id,
+    assert(directed_graph.adjacency_matrix.dimension == dup_directed_graph.adjacency_matrix.dimension,
            "Graph was incorrectly duplicated");
     assert(directed_graph.adjacency_matrix.col_indices.size ==
            dup_directed_graph.adjacency_matrix.col_indices.size, "Graph was incorrectly duplicated");
@@ -770,6 +793,7 @@ static TEST_RESULT test_free_gphrx()
 static TEST_RESULT test_free_gphrx_csr_matrix()
 {
     GphrxCsrMatrix matrix = {
+        .dimension = 5,
         .entries = new_dynarr_dbl_with_capacity(100),
         .col_indices = new_dynarr_u64_with_capacity(150),
         .row_indices = new_dynarr_u64_with_capacity(125),
@@ -784,6 +808,7 @@ static TEST_RESULT test_free_gphrx_csr_matrix()
 static TEST_RESULT test_free_gphrx_csr_adj_matrix()
 {
     GphrxCsrAdjacencyMatrix matrix = {
+        .dimension = 5,
         .col_indices = new_dynarr_u64_with_capacity(100),
         .row_indices = new_dynarr_u64_with_capacity(10),
     };
@@ -809,7 +834,7 @@ static TEST_RESULT test_gphrx_csr_matrix_to_string()
     gphrx_add_edge(&undirected_graph, 6, 6);
     
     GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 3);
-    char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 3, 3);
+    char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 3);
 
     char *expected_str = "[ 0.778, 0.222, 0.111 ]\r\n[ 0.222, 0.222, 0.000 ]\r\n[ 0.111, 0.000, 0.111 ]";
     assert(strcmp(occurrence_matrix_str, expected_str) == 0, "CSR matrix string does not match expected");
@@ -833,12 +858,10 @@ static TEST_RESULT test_gphrx_csr_adj_matrix_to_string()
     gphrx_add_edge(&undirected_graph, 3, 2);
     gphrx_add_edge(&undirected_graph, 3, 1);
 
-    char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix,
-                                                                undirected_graph.highest_vertex_id + 1);
+    char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix);
 
     char *expected_str = "[ 0, 1, 1, 0 ]\r\n[ 1, 1, 1, 1 ]\r\n[ 1, 1, 0, 1 ]\r\n[ 0, 1, 1, 0 ]";
     assert(strcmp(undir_adj_matrix_str, expected_str) == 0, "Adjacency matrix string does not match expected");
-    
 
     free_gphrx_byte_array(undir_adj_matrix_str);
     free_gphrx(&undirected_graph);
@@ -920,7 +943,8 @@ static TEST_RESULT test_gphrx_add_vertex()
     gphrx_add_vertex(&undirected_graph, 7, to_edges, 5);    
     gphrx_add_edge(&undirected_graph, 500, 1001);
     gphrx_add_edge(&undirected_graph, 500, 7);    
-    
+
+    assert(undirected_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.col_indices.size == 16, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 16, "Incorrect adjacency matrix");
     
@@ -996,7 +1020,8 @@ static TEST_RESULT test_gphrx_add_vertex()
     gphrx_add_vertex(&directed_graph, 7, to_edges, 5);
     gphrx_add_edge(&directed_graph, 500, 1001);
     gphrx_add_edge(&directed_graph, 500, 7);
-    
+
+    assert(directed_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.col_indices.size == 8, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 8, "Incorrect adjacency matrix");
     
@@ -1050,12 +1075,14 @@ static TEST_RESULT test_gphrx_remove_vertex()
     gphrx_add_vertex(&undirected_graph, 7, to_edges, 5);    
     gphrx_add_edge(&undirected_graph, 500, 1001);
     gphrx_add_edge(&undirected_graph, 500, 7);    
-    
+
+    assert(undirected_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.col_indices.size == 16, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 16, "Incorrect adjacency matrix");
 
     gphrx_remove_vertex(&undirected_graph, 7);
 
+    assert(undirected_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.col_indices.size == 4, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 4, "Incorrect adjacency matrix");
     
@@ -1078,7 +1105,8 @@ static TEST_RESULT test_gphrx_remove_vertex()
            "Incorrect adjacency matrix");
     
     gphrx_remove_vertex(&undirected_graph, 1000);
-
+    
+    assert(undirected_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.col_indices.size == 2, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 2, "Incorrect adjacency matrix");
 
@@ -1091,6 +1119,12 @@ static TEST_RESULT test_gphrx_remove_vertex()
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 1) == 500,
            "Incorrect adjacency matrix");
+
+    gphrx_remove_vertex(&undirected_graph, 1001);
+
+    assert(undirected_graph.adjacency_matrix.dimension == 1001, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.col_indices.size == 0, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.row_indices.size == 0, "Incorrect adjacency matrix");
     
     GphrxGraph directed_graph = new_directed_gphrx();
         
@@ -1098,12 +1132,14 @@ static TEST_RESULT test_gphrx_remove_vertex()
     gphrx_add_vertex(&directed_graph, 7, to_edges, 5);
     gphrx_add_edge(&directed_graph, 500, 1001);
     gphrx_add_edge(&directed_graph, 500, 7);
-    
+
+    assert(directed_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.col_indices.size == 8, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 8, "Incorrect adjacency matrix");
 
     gphrx_remove_vertex(&directed_graph, 7);
 
+    assert(directed_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.col_indices.size == 2, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 2, "Incorrect adjacency matrix");
     
@@ -1119,6 +1155,7 @@ static TEST_RESULT test_gphrx_remove_vertex()
 
     gphrx_remove_vertex(&directed_graph, 1000);
 
+    assert(directed_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.col_indices.size == 1, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 1, "Incorrect adjacency matrix");
 
@@ -1129,7 +1166,15 @@ static TEST_RESULT test_gphrx_remove_vertex()
            "Incorrect adjacency matrix");
 
     gphrx_remove_vertex(&directed_graph, 500);
+    
+    assert(directed_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.col_indices.size == 0, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.row_indices.size == 0, "Incorrect adjacency matrix");
 
+    gphrx_add_edge(&directed_graph, 1001, 500);
+    gphrx_remove_vertex(&directed_graph, 1001);
+
+    assert(directed_graph.adjacency_matrix.dimension == 1001, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.col_indices.size == 0, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 0, "Incorrect adjacency matrix");
 
@@ -1147,8 +1192,8 @@ static TEST_RESULT test_gphrx_add_edge()
     gphrx_add_edge(&undirected_graph, 100, 5);
     gphrx_add_edge(&directed_graph, 9, 1001);
 
-    assert(undirected_graph.highest_vertex_id == 100, "Incorrect highest vertex ID");
-    assert(directed_graph.highest_vertex_id == 1001, "Incorrect highest vertex ID");
+    assert(undirected_graph.adjacency_matrix.dimension == 101, "Incorrect adjacency matrix dimension");
+    assert(directed_graph.adjacency_matrix.dimension == 1002, "Incorrect adjacency matrix dimension");
 
     assert(undirected_graph.adjacency_matrix.col_indices.size == 2, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 2, "Incorrect adjacency matrix");
@@ -1275,6 +1320,54 @@ static TEST_RESULT test_gphrx_remove_edge()
     return TEST_PASS;
 }
 
+// TODO
+static TEST_RESULT test_gphrx_find_occurrence_matrix()
+{
+    u64 to_edges_1[] = {0, 2, 4, 7, 3};
+    u64 to_edges_5[] = {6, 8, 0, 1, 5, 4, 2};
+    
+    GphrxGraph undirected_graph = new_undirected_gphrx();
+    
+    gphrx_add_edge(&undirected_graph, 7, 8);
+    gphrx_add_vertex(&undirected_graph, 1, to_edges_1, 5);
+    gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
+    
+    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 9);
+    char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
+
+    // TODO: Remove
+    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix));
+    printf("%s\n\n", gphrx_csr_matrix_to_string(&occurrence_matrix, 2));
+
+    free_gphrx_csr_matrix(&occurrence_matrix);
+    free_gphrx(&undirected_graph);
+    
+    undirected_graph = new_undirected_gphrx();
+
+    gphrx_add_edge(&undirected_graph, 0, 1);
+    gphrx_add_edge(&undirected_graph, 1, 1);
+    gphrx_add_edge(&undirected_graph, 2, 1);
+    gphrx_add_edge(&undirected_graph, 2, 0);
+    gphrx_add_edge(&undirected_graph, 3, 2);
+    gphrx_add_edge(&undirected_graph, 3, 1);
+    gphrx_add_edge(&undirected_graph, 3, 4);
+    gphrx_add_edge(&undirected_graph, 0, 6);
+    gphrx_add_edge(&undirected_graph, 6, 6);
+    
+    occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 3);
+    occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 3);
+
+    // TODO: Remove
+    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix));
+    printf("%s\n\n", gphrx_csr_matrix_to_string(&occurrence_matrix, 2));
+
+    free_gphrx_csr_matrix(&occurrence_matrix);
+    free_gphrx(&undirected_graph);
+
+    return TEST_FAIL;
+}
+
+// TODO
 static TEST_RESULT test_approximate_gphrx()
 {
     // u64 to_edges_7[] = {3, 2, 11, 12, 9};
@@ -1298,15 +1391,13 @@ static TEST_RESULT test_approximate_gphrx()
     gphrx_add_vertex(&undirected_graph, 1, to_edges_1, 5);
     gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
 
-    char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix,
-                                                                undirected_graph.highest_vertex_id + 1);
+    char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix);
     printf("%s\n\n", undir_adj_matrix_str);
     free(undir_adj_matrix_str);
 
     GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.4);
 
-    char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix,
-                                                                 approx_graph.highest_vertex_id + 1);
+    char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix);
 
     printf("%s", approx_adj_matrix_str);
     free(approx_adj_matrix_str);
@@ -1335,7 +1426,8 @@ static TEST_RESULT test_gphrx_to_from_byte_array()
     assert(error == GPHRX_NO_ERROR, "Error unpacking graph from byte array");
 
     assert(undir_graph_from_arr.is_undirected, "Incorrectly loaded graph");
-    assert(undir_graph_from_arr.highest_vertex_id == undirected_graph.highest_vertex_id,
+
+    assert(undir_graph_from_arr.adjacency_matrix.dimension == undirected_graph.adjacency_matrix.dimension,
            "Incorrectly loaded graph");
 
     assert(undir_graph_from_arr.adjacency_matrix.col_indices.size ==
@@ -1371,7 +1463,8 @@ static TEST_RESULT test_gphrx_to_from_byte_array()
     assert(error == GPHRX_NO_ERROR, "Error unpacking graph from byte array");
 
     assert(!dir_graph_from_arr.is_undirected, "Incorrectly loaded graph");
-    assert(dir_graph_from_arr.highest_vertex_id == directed_graph.highest_vertex_id,
+
+    assert(dir_graph_from_arr.adjacency_matrix.dimension == directed_graph.adjacency_matrix.dimension,
            "Incorrectly loaded graph");
 
     assert(dir_graph_from_arr.adjacency_matrix.col_indices.size ==
@@ -1417,7 +1510,8 @@ ModuleTestSet gphrx_h_register_tests()
     register_test(&set, test_gphrx_remove_vertex);
     register_test(&set, test_gphrx_add_edge);
     register_test(&set, test_gphrx_remove_edge);
-    register_test(&set, test_approximate_gphrx);
+    // register_test(&set, test_gphrx_find_occurrence_matrix);
+    // register_test(&set, test_approximate_gphrx);
     register_test(&set, test_gphrx_to_from_byte_array);
 
     return set;

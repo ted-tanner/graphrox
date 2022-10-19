@@ -9,6 +9,9 @@
 #include "dynarray.h"
 #include "intrinsics.h"
 
+// TODO: Store dimension with matrices and get ride of highest_vertex_id. Then the to_string functions
+//       won't require the dimension to be passed explicitly
+
 // TODO: In separate file, create a GphrxWeightedGraph struct and wgphrx_* functions. For
 //       approximation, the entries in the approximated GphrxWeightedGraph will be averaged
 //       together to form the entry in the approximated matrix.
@@ -35,8 +38,8 @@ typedef u8 GphrxErrorCode;
 typedef struct {
     u32 magic_number;
     u32 version;
-    u64 highest_vertex_id;
     u64 adjacency_matrix_dimension;
+    u64 csr_adjacency_matrix_size;
     u8 is_undirected;
     u8 is_weighted;
 } GphrxByteArrayHeader;
@@ -45,6 +48,7 @@ typedef struct {
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
 typedef struct {
+    u64 dimension;
     DynamicArrayU64 col_indices;
     DynamicArrayU64 row_indices;
 } GphrxCsrAdjacencyMatrix;
@@ -54,6 +58,7 @@ typedef struct {
  * Compress Space Row formatted matrix stored with dynamic arrays.
  */
 typedef struct {
+    u64 dimension;
     DynamicArrayDouble entries;
     DynamicArrayU64 col_indices;
     DynamicArrayU64 row_indices; 
@@ -64,7 +69,6 @@ typedef struct {
  */
 typedef struct {
     bool is_undirected;
-    u64 highest_vertex_id;
     GphrxCsrAdjacencyMatrix adjacency_matrix;
 } GphrxGraph;
 
@@ -102,12 +106,12 @@ DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix);
 /**
  * Converts the given GphrxCsrMatrix to a string representation.
  */
-DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, u64 dimension, int decimal_digits);
+DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, int decimal_digits);
 
 /**
  * Converts the given GphrxCsrAdjacencyMatrix to a string representation.
  */
-DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix, u64 dimension);
+DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix);
 
 /**
  * Frees up excess memory used by the lists that describe the graph. This can substantially reduce memory
