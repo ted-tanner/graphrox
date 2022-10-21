@@ -24,6 +24,9 @@
 
 // TODO: Should the occurrence matrix be renamed the "occurrence probability matrix"?
 
+// TODO: Sort row vector for each column. Essentially, do a small search for position when inserting.
+//       Then, when finding the index of a vertex, the search can run a little faster.
+
 /** Error codes */
 typedef u8 GphrxErrorCode;
 

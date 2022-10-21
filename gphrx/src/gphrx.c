@@ -389,7 +389,6 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id
     return GPHRX_NO_ERROR;
 }
 
-// TODO: Test
 // TODO: Add to Python
 DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 block_dimension)
 {
@@ -1305,7 +1304,7 @@ static TEST_RESULT test_gphrx_remove_edge()
     return TEST_PASS;
 }
 
-// TODO
+
 static TEST_RESULT test_gphrx_find_occurrence_matrix()
 {
     u64 to_edges_1[] = {0, 2, 4, 7, 3};
@@ -1318,38 +1317,69 @@ static TEST_RESULT test_gphrx_find_occurrence_matrix()
     gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
     
     GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 5);
-    char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
 
-    // TODO: Remove
-    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix));
-    printf("%s\n\n", gphrx_csr_matrix_to_string(&occurrence_matrix, 2));
+    assert(occurrence_matrix.entries.size == 4, "Incorrect occurrence matrix");
+    assert(occurrence_matrix.col_indices.size == 4, "Incorrect occurrence matrix");
+    assert(occurrence_matrix.row_indices.size == 4, "Incorrect occurrence matrix");
+    
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 0) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 1) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 2) == 1, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 3) == 1, "Incorrect occurrence matrix");
 
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 0) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 1) == 1, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 2) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 3) == 1, "Incorrect occurrence matrix");
+
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 0) * 100) == 16, "Incorrect occurrence matrix");
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 1) * 100) == 4, "Incorrect occurrence matrix");
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 2) * 100) == 16, "Incorrect occurrence matrix");
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 3) * 100) == 16, "Incorrect occurrence matrix");
+    
     free_gphrx_csr_matrix(&occurrence_matrix);
     free_gphrx(&undirected_graph);
     
-    undirected_graph = new_undirected_gphrx();
+    GphrxGraph directed_graph = new_directed_gphrx();
 
-    gphrx_add_edge(&undirected_graph, 0, 1);
-    gphrx_add_edge(&undirected_graph, 1, 1);
-    gphrx_add_edge(&undirected_graph, 2, 1);
-    gphrx_add_edge(&undirected_graph, 2, 0);
-    gphrx_add_edge(&undirected_graph, 3, 2);
-    gphrx_add_edge(&undirected_graph, 3, 1);
-    gphrx_add_edge(&undirected_graph, 3, 4);
-    gphrx_add_edge(&undirected_graph, 0, 6);
-    gphrx_add_edge(&undirected_graph, 6, 6);
+    gphrx_add_edge(&directed_graph, 0, 1);
+    gphrx_add_edge(&directed_graph, 1, 1);
+    gphrx_add_edge(&directed_graph, 2, 1);
+    gphrx_add_edge(&directed_graph, 2, 0);
+    gphrx_add_edge(&directed_graph, 3, 2);
+    gphrx_add_edge(&directed_graph, 3, 1);
+    gphrx_add_edge(&directed_graph, 3, 4);
+    gphrx_add_edge(&directed_graph, 0, 6);
+    gphrx_add_edge(&directed_graph, 6, 6);
     
-    occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 3);
-    occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 3);
+    occurrence_matrix = gphrx_find_occurrence_matrix(&directed_graph, 3);
+        
+    assert(occurrence_matrix.entries.size == 5, "Incorrect occurrence matrix");
+    assert(occurrence_matrix.col_indices.size == 5, "Incorrect occurrence matrix");
+    assert(occurrence_matrix.row_indices.size == 5, "Incorrect occurrence matrix");
+    
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 0) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 1) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 2) == 1, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 3) == 1, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 4) == 2, "Incorrect occurrence matrix");
 
-    // TODO: Remove
-    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix));
-    printf("%s\n\n", gphrx_csr_matrix_to_string(&occurrence_matrix, 2));
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 0) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 1) == 2, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 2) == 0, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 3) == 1, "Incorrect occurrence matrix");
+    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 4) == 2, "Incorrect occurrence matrix");
+
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 0) * 100) == 44, "Incorrect occurrence matrix");
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 1) * 100) == 11, "Incorrect occurrence matrix");
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 2) * 100) == 22, "Incorrect occurrence matrix");
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 3) * 100) == 11, "Incorrect occurrence matrix");
+    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 4) * 100) == 11, "Incorrect occurrence matrix");
 
     free_gphrx_csr_matrix(&occurrence_matrix);
-    free_gphrx(&undirected_graph);
+    free_gphrx(&directed_graph);
 
-    return TEST_FAIL;
+    return TEST_PASS;
 }
 
 // TODO
