@@ -262,6 +262,12 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
             return curr_idx;
     }
 
+    if (dynarr_u64_get(col_arr, curr_idx) == from_vertex_id &&
+        dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
+    {
+        return curr_idx;
+    }
+
     curr_idx = curr_idx_temp;
 
     bool was_prev_greater = false;
@@ -313,7 +319,6 @@ DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_ed
 {
     if (vertex_id + 1 > graph->adjacency_matrix.dimension)
         graph->adjacency_matrix.dimension = vertex_id + 1;
-
 
     // TODO: Considering the vertex_id is always the same, we shouldn't have to search the list for the col
     //       every time.
@@ -368,8 +373,6 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
                           &graph->adjacency_matrix.row_indices,
                           from_vertex_id, to_vertex_id);
 
-    // TODO: This will only be effective once nodes are sorted by row as well
-    // TODO: Test - Add this case to test_gphrx_add_edge 
     if (vertex_idx < graph->adjacency_matrix.col_indices.size &&
         dynarr_u64_get(&graph->adjacency_matrix.col_indices, vertex_idx) == from_vertex_id &&
         dynarr_u64_get(&graph->adjacency_matrix.row_indices, vertex_idx) == to_vertex_id)
@@ -1438,38 +1441,76 @@ static TEST_RESULT test_approximate_gphrx()
     gphrx_add_vertex(&undirected_graph, 1, to_edges_1, 5);
     gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
 
-    printf("Dimension: %llu\n\n", undirected_graph.adjacency_matrix.dimension);
+    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.3);
 
-    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix));
-
-    // This approximation doesn't seem quite right. The edges in the bottom corner are beign
-    // incorrectly set to 0.50 in the occurrence matrix when they should only be 0.25
-    GphrxGraph approx_graph1 = approximate_gphrx(&undirected_graph, 2, 0.3);
-
-    // The occurence matrix here is also making the nodes at the bottom corner of the adjacency
-    // matrix to be more than they are. They should be 2/16 = 1/8 = 0.125, but they are instead
-    // listed as 0.19
-    GphrxGraph approx_graph2 = approximate_gphrx(&undirected_graph, 4, 0.1);
-
-    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&approx_graph1.adjacency_matrix));
+    assert(approx_graph.adjacency_matrix.dimension == 5, "Incorrect graph approximation");
     
-    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 2);
-    char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
+    assert(approx_graph.adjacency_matrix.col_indices.size == 6, "Incorrect graph approximation");
+    assert(approx_graph.adjacency_matrix.row_indices.size == 6, "Incorrect graph approximation");
+    
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 1), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 2), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 1, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 2, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 2, 2), "Incorrect graph approximation");
 
-    printf("%s\n\n", occurrence_matrix_str);
+    free_gphrx(&approx_graph);
 
-    occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 4);
-    occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
+    approx_graph = approximate_gphrx(&undirected_graph, 3, 0.2);
 
-    printf("%s\n\n", occurrence_matrix_str);
+    assert(approx_graph.adjacency_matrix.dimension == 3, "Incorrect graph approximation");
+    
+    assert(approx_graph.adjacency_matrix.col_indices.size == 7, "Incorrect graph approximation");
+    assert(approx_graph.adjacency_matrix.row_indices.size == 7, "Incorrect graph approximation");
+    
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 1), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 1, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 1, 1), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 1, 2), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 2, 1), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 2, 2), "Incorrect graph approximation");
 
-    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&approx_graph2.adjacency_matrix));
-           
+    free_gphrx(&approx_graph);
     free_gphrx(&undirected_graph);
 
-    // TODO: Test again with directed graphs
+    GphrxGraph directed_graph = new_directed_gphrx();
+
+    gphrx_add_edge(&directed_graph, 7, 8);
+    gphrx_add_vertex(&directed_graph, 1, to_edges_1, 5);
+    gphrx_add_vertex(&directed_graph, 5, to_edges_5, 7);
+
+    approx_graph = approximate_gphrx(&directed_graph, 2, 0.3);
+
+    assert(approx_graph.adjacency_matrix.dimension == 5, "Incorrect graph approximation");
     
-    return TEST_FAIL;
+    assert(approx_graph.adjacency_matrix.col_indices.size == 3, "Incorrect graph approximation");
+    assert(approx_graph.adjacency_matrix.row_indices.size == 3, "Incorrect graph approximation");
+    
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 1), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 2, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 2, 2), "Incorrect graph approximation");
+
+    free_gphrx(&approx_graph);
+
+    approx_graph = approximate_gphrx(&directed_graph, 3, 0.2);
+    
+    assert(approx_graph.adjacency_matrix.dimension == 3, "Incorrect graph approximation");
+    
+    assert(approx_graph.adjacency_matrix.col_indices.size == 5, "Incorrect graph approximation");
+    assert(approx_graph.adjacency_matrix.row_indices.size == 5, "Incorrect graph approximation");
+    
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 0, 1), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 1, 0), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 1, 1), "Incorrect graph approximation");
+    assert(gphrx_does_edge_exist(&approx_graph, 1, 2), "Incorrect graph approximation");
+
+    free_gphrx(&approx_graph);
+    free_gphrx(&directed_graph);
+    
+    return TEST_PASS;
 }
 
 static TEST_RESULT test_gphrx_to_from_byte_array()
