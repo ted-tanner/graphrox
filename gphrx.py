@@ -7,9 +7,6 @@ import platform
 import sys
 
 
-# TODO: Approximation methods
-
-
 class _DynamicArrayU64_c(ctypes.Structure):
     _fields_ = [
         ("capacity", ctypes.c_size_t),
@@ -17,8 +14,24 @@ class _DynamicArrayU64_c(ctypes.Structure):
         ("arr", ctypes.POINTER(ctypes.c_uint64))]
 
     
+class _DynamicArrayDouble_c(ctypes.Structure):
+    _fields_ = [
+        ("capacity", ctypes.c_size_t),
+        ("size", ctypes.c_size_t),
+        ("arr", ctypes.POINTER(ctypes.c_double))]
+
+    
 class _GphrxCsrAdjacencyMatrix_c(ctypes.Structure):
     _fields_ = [
+        ("dimension", ctypes.c_uint64),
+        ("col_indices", _DynamicArrayU64_c),
+        ("row_indices", _DynamicArrayU64_c)]
+
+    
+class _GphrxCsrMatrix_c(ctypes.Structure):
+    _fields_ = [
+        ("dimension", ctypes.c_uint64),
+        ("col_indices", _DynamicArrayDouble_c),
         ("col_indices", _DynamicArrayU64_c),
         ("row_indices", _DynamicArrayU64_c)]
 
@@ -26,7 +39,6 @@ class _GphrxCsrAdjacencyMatrix_c(ctypes.Structure):
 class _GphrxGraph_c(ctypes.Structure):
     _fields_ = [
         ("is_undirected", ctypes.c_bool),
-        ("highest_vertex_id", ctypes.c_uint64),
         ("adjacency_matrix", _GphrxCsrAdjacencyMatrix_c)]
 
 
@@ -70,6 +82,18 @@ _gphrx_lib.duplicate_gphrx.restype = _GphrxGraph_c
 _gphrx_lib.free_gphrx.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.free_gphrx.restype = None
 
+_gphrx_lib.free_gphrx_csr_matrix.argtypes = [ctypes.POINTER(_GphrxCsrMatrix_c)]
+_gphrx_lib.free_gphrx_csr_matrix.restype = None
+
+_gphrx_lib.free_gphrx_csr_adj_matrix.argtypes = [ctypes.POINTER(_GphrxCsrAdjacencyMatrix_c)]
+_gphrx_lib.free_gphrx_csr_adj_matrix.restype = None
+
+_gphrx_lib.gphrx_csr_matrix_to_string.argtypes = (ctypes.POINTER(_GphrxCsrMatrix_c), ctypes.c_int)
+_gphrx_lib.gphrx_csr_matrix_to_string.restype = ctypes.c_void_p
+
+_gphrx_lib.gphrx_csr_adj_matrix_to_string.argtypes = [ctypes.POINTER(_GphrxCsrAdjacencyMatrix_c)]
+_gphrx_lib.gphrx_csr_adj_matrix_to_string.restype = ctypes.c_void_p
+
 _gphrx_lib.gphrx_shrink.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.gphrx_shrink.restype = None
 
@@ -91,6 +115,12 @@ _gphrx_lib.gphrx_add_edge.restype = None
 _gphrx_lib.gphrx_remove_edge.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64, ctypes.c_uint64)
 _gphrx_lib.gphrx_remove_edge.restype = ctypes.c_uint8
 
+_gphrx_lib.gphrx_find_occurrence_matrix.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64)
+_gphrx_lib.gphrx_find_occurrence_matrix.restype = _GphrxCsrMatrix_c
+
+_gphrx_lib.approximate_gphrx.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64, ctypes.c_double)
+_gphrx_lib.approximate_gphrx.restype = _GphrxGraph_c
+
 _gphrx_lib.gphrx_to_byte_array.argtypes = [ctypes.POINTER(_GphrxGraph_c)]
 _gphrx_lib.gphrx_to_byte_array.restype = ctypes.POINTER(ctypes.c_ubyte)
 
@@ -101,17 +131,54 @@ _gphrx_lib.free_gphrx_byte_array.argtypes = [ctypes.c_void_p]
 _gphrx_lib.free_gphrx_byte_array.restype = None
 
 
+class GphrxOccurrenceMatrix:
+    def __init__(self, c_csr_matrix):
+        self._matrix = c_csr_matrix
+
+    def dimension(self):
+        return self._matrix.dimension
+
+    def to_string_with_precision(precision):
+        c_str = _gphrx_lib.gphrx_csr_matrix_to_string(self._matrix, precision)
+        py_str = ctypes.cast(c_str, ctypes.c_char_p).value
+        _gphrx_lib.free_gphrx_byte_array(c_str)
+        return py_str.decode('utf-8')
+
+    def __str__(self):
+        return to_string_with_precision(2)
+    
+    def __del__(self):
+        _gphrx_lib.free_gphrx_csr_matrix(self._matrix)
+
+
+class GphrxAdjacencyMatrix:
+    def __init__(self, c_csr_adj_matrix):
+        self._matrix = c_csr_adj_matrix
+
+    def dimension(self):
+        return self._matrix.dimension
+
+    def __str__(self):
+        c_str = _gphrx_lib.gphrx_csr_adj_matrix_to_string(self._matrix)
+        py_str = ctypes.cast(c_str, ctypes.c_char_p).value
+        _gphrx_lib.free_gphrx_byte_array(c_str)
+        return py_str.decode('utf-8')
+    
+    def __del__(self):
+        _gphrx_lib.free_gphrx_csr_adj_matrix(self._matrix)
+
+
 class GphrxGraph:
-    def __init__(self, is_undirected=True, byte_array=None):
-        if byte_array is not None:
-            pass
-        else: 
-            self.is_undirected = is_undirected
-            self.highest_vertex_id = 0
-            self._graph = _gphrx_lib.new_undirected_gphrx() if is_undirected else _gphrx_lib.new_directed_gphrx()
+    def __init__(self, is_undirected=True):
+        self.is_undirected = is_undirected
+        self._graph = _gphrx_lib.new_undirected_gphrx() if is_undirected else _gphrx_lib.new_directed_gphrx()
+        self.adjacency_matrix = GphrxAdjacencyMatrix(self._graph.adjacency_matrix)
 
     def __del__(self):
-        _gphrx_lib.free_gphrx(self._graph)
+        # Note: Freeing the GphrxGraph via free_gphrx will call free on the adjacency matrix. However, the
+        #       adjacency matrix will already be freed when __del__ is called on self.adjacency_matrix
+        # _gphrx_lib.free_gphrx(self._graph)
+        pass
 
     @staticmethod
     def from_bytes(byte_array):
@@ -123,21 +190,20 @@ class GphrxGraph:
             raise ValueError("GrphxGraph could not be constructed from the provided bytes")
 
         graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
-        graph.highest_vertex_id = c_graph.highest_vertex_id
         
         _gphrx_lib.free_gphrx(graph._graph)
         graph._graph = c_graph
+        graph.adjacency_matrix._matrix = c_graph.adjacency_matrix
         
         return graph
 
     def duplicate(self):
         c_graph = _gphrx_lib.duplicate_gphrx(self._graph)
-        
         graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
-        graph.highest_vertex_id = c_graph.highest_vertex_id
 
         _gphrx_lib.free_gphrx(graph._graph)
         graph._graph = c_graph
+        graph.adjacency_matrix._matrix = c_graph.adjacency_matrix
 
         return graph
         
@@ -147,24 +213,15 @@ class GphrxGraph:
     def does_edge_exist(self, from_vertex_id, to_vertex_id):
         return _gphrx_lib.gphrx_does_edge_exist(self._graph, from_vertex_id, to_vertex_id)
 
-    def add_vertex(self, vertex_id, vertex_edges):
+    def add_vertex(self, vertex_id, vertex_edges=[]):
         edges_arr = ctypes.c_uint64 * len(vertex_edges)
         _gphrx_lib.gphrx_add_vertex(self._graph, vertex_id, edges_arr(*vertex_edges), len(vertex_edges))
-
-        if self._graph.highest_vertex_id != self.highest_vertex_id:
-            self.highest_vertex_id = self._graph.highest_vertex_id
 
     def remove_vertex(self, vertex_id):
         _gphrx_lib.gphrx_remove_vertex(self._graph, vertex_id)
 
-        if self._graph.highest_vertex_id != self.highest_vertex_id:
-            self.highest_vertex_id = self._graph.highest_vertex_id
-
     def add_edge(self, from_vertex_id, to_vertex_id):
         _gphrx_lib.gphrx_add_edge(self._graph, from_vertex_id, to_vertex_id)
-
-        if self._graph.highest_vertex_id != self.highest_vertex_id:
-            self.highest_vertex_id = self._graph.highest_vertex_id
 
     def remove_edge(self, from_vertex_id, to_vertex_id):
         error_code = _gphrx_lib.gphrx_remove_edge(self._graph, from_vertex_id, to_vertex_id)
@@ -172,9 +229,20 @@ class GphrxGraph:
         if error_code == _GphrxErrorCode.GPHRX_ERROR_NOT_FOUND.value:
             raise ValueError("Edge from vertex " + str(from_vertex_id) +
                              " to vertex " + str(to_vertex_id) + " does not exist")
-        
-        if self._graph.highest_vertex_id != self.highest_vertex_id:
-            self.highest_vertex_id = self._graph.highest_vertex_id
+
+    # TODO
+    def find_occurrence_matrix(self, block_dimension):
+        pass
+
+    # TODO: Test
+    def approximate(self, block_dimension, threshold):
+        c_graph = _gphrx_lib.approximate_gphrx(self._graph, block_dimension, threshold)
+        graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
+
+        graph._graph = c_graph
+        graph.adjacency_matrix._matrix = c_graph.adjacency_matrix
+
+        return graph
 
     def save_to_file(self, file_name):
         with open(file_name, 'wb') as f:
@@ -214,23 +282,32 @@ class GphrxDirectedGraph(GphrxGraph):
 
 
 if __name__ == '__main__':
-    test = GphrxUndirectedGraph()
-    print(test)
-    
-    print(test.highest_vertex_id)
-    test.add_edge(10, 100)
-    print(test.highest_vertex_id)
-    test.add_vertex(122, [1, 10, 100, 1001])
-    test = test.duplicate()
-    test.add_edge(10, 100)
-    print(test.does_edge_exist(10, 100))
-    print(test.highest_vertex_id)
+    test_graph = GphrxUndirectedGraph()
 
-    # test.save_to_file('./test.gphrx')
+    print(test_graph.adjacency_matrix.dimension())
+    print(test_graph.adjacency_matrix)
     
-    test.remove_edge(122, 10)
-    test.remove_vertex(122)
-    test.shrink()
+    test_graph.add_edge(4, 3)
+    # TODO: Why does this next line segfault
+    # test_graph.add_edge(5, 5)
+    test_graph.add_vertex(2, [1, 6, 7, 3, 0])
+    test_graph.add_vertex(8)
+    test_graph = test_graph.duplicate()
+    test_graph.add_edge(0, 1)
+    print(test_graph.does_edge_exist(3, 4))
 
-    test2 = GphrxGraph.from_bytes(bytes(test))
-    print(test2.highest_vertex_id)
+    # test_graph.save_to_file('./test_graph.gphrx')
+
+    print(test_graph.adjacency_matrix.dimension())
+    print(test_graph.adjacency_matrix)
+    
+    test_graph.remove_edge(7, 2)
+    test_graph.remove_vertex(2)
+    test_graph.remove_edge(4, 3)
+    test_graph.shrink()
+
+    # TODO: Why is there still a one in the matrix?!
+    print(test_graph.adjacency_matrix.dimension())
+    print(test_graph.adjacency_matrix)
+
+    test_graph2 = GphrxGraph.from_bytes(bytes(test_graph))

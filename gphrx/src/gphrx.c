@@ -100,6 +100,9 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, int decimal_d
     char *buffer = malloc(extra_chars_per_row_total * matrix->dimension +
                           chars_per_entry * matrix->dimension * matrix->dimension);
 
+    if (matrix->dimension == 0)
+        return buffer;
+
     size_t pos = 0;
     for (u64 row = 0; row < matrix->dimension; ++row)
     {
@@ -160,6 +163,9 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix)
 
     char *buffer = malloc(extra_chars_per_row_total * matrix->dimension +
                           chars_per_entry * matrix->dimension * matrix->dimension);
+
+    if (matrix->dimension == 0)
+        return buffer;
 
     size_t pos = 0;
     for (u64 row = 0; row < matrix->dimension; ++row)

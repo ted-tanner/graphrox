@@ -9,23 +9,17 @@
 #include "dynarray.h"
 #include "intrinsics.h"
 
-// TODO: Store dimension with matrices and get ride of highest_vertex_id. Then the to_string functions
-//       won't require the dimension to be passed explicitly
-
 // TODO: In separate file, create a GphrxWeightedGraph struct and wgphrx_* functions. For
 //       approximation, the entries in the approximated GphrxWeightedGraph will be averaged
 //       together to form the entry in the approximated matrix.
 
 // TODO: Functions
-//         - Get from matrix (give col and row, return entry)
+//         - Get from CSR matrix (give col and row, return entry)
 //         - Scale an approximation given a threshold and scale factor
 
 // TODO: Split matrices into their own files gphrx_matrix.h gphrx_matrix.c
 
 // TODO: Should the occurrence matrix be renamed the "occurrence probability matrix"?
-
-// TODO: Sort row vector for each column. Essentially, do a small search for position when inserting.
-//       Then, when finding the index of a vertex, the search can run a little faster.
 
 /** Error codes */
 typedef u8 GphrxErrorCode;
