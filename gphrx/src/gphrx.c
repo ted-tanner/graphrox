@@ -342,6 +342,16 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
         : index_of_vertex(&graph->adjacency_matrix.col_indices,
                           &graph->adjacency_matrix.row_indices,
                           from_vertex_id, to_vertex_id);
+
+    // TODO: This will only be effective once nodes are sorted by row as well
+    // TODO: Test - Add this case to test_gphrx_add_edge 
+    if (vertex_idx < graph->adjacency_matrix.col_indices.size - 1 &&
+        dynarr_u64_get(&graph->adjacency_matrix.col_indices, vertex_idx) == from_vertex_id &&
+        dynarr_u64_get(&graph->adjacency_matrix.row_indices, vertex_idx) == to_vertex_id)
+    {
+        // The edge already exists
+        return;
+    }
     
     dynarr_u64_push_at(&graph->adjacency_matrix.col_indices, from_vertex_id, vertex_idx);
     dynarr_u64_push_at(&graph->adjacency_matrix.row_indices, to_vertex_id, vertex_idx);
@@ -425,7 +435,7 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
         .col_indices = new_dynarr_u64_with_capacity(block_count),
         .row_indices = new_dynarr_u64_with_capacity(block_count),
     };
-
+    
     double block_size = block_dimension * block_dimension;
     for (size_t col = 0; col < blocks_per_row; ++col)
     {
@@ -448,7 +458,6 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
     return occurrence_matrix;
 }
 
-// TODO: Test
 // TODO: Add to Python
 DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, double threshold)
 {
@@ -845,6 +854,7 @@ static TEST_RESULT test_gphrx_csr_adj_matrix_to_string()
     char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix);
 
     char *expected_str = "[ 0, 1, 1, 0 ]\r\n[ 1, 1, 1, 1 ]\r\n[ 1, 1, 0, 1 ]\r\n[ 0, 1, 1, 0 ]";
+    printf("%s\n\n", undir_adj_matrix_str);
     assert(strcmp(undir_adj_matrix_str, expected_str) == 0, "Adjacency matrix string does not match expected");
 
     free_gphrx_byte_array(undir_adj_matrix_str);
@@ -1181,6 +1191,20 @@ static TEST_RESULT test_gphrx_add_edge()
 
     assert(undirected_graph.adjacency_matrix.col_indices.size == 2, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 2, "Incorrect adjacency matrix");
+
+    assert(directed_graph.adjacency_matrix.col_indices.size == 1, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.row_indices.size == 1, "Incorrect adjacency matrix");
+
+    // Try adding the same edges again and make sure the edge doesn't get added a second time
+    gphrx_add_edge(&undirected_graph, 100, 5);
+    gphrx_add_edge(&directed_graph, 9, 1001);
+
+    // TODO: This fails because the rows in each column are not sorted
+    assert(undirected_graph.adjacency_matrix.col_indices.size == 2, "Incorrect adjacency matrix");
+    assert(undirected_graph.adjacency_matrix.row_indices.size == 2, "Incorrect adjacency matrix");
+
+    assert(directed_graph.adjacency_matrix.col_indices.size == 1, "Incorrect adjacency matrix");
+    assert(directed_graph.adjacency_matrix.row_indices.size == 1, "Incorrect adjacency matrix");
     
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 0) == 5,
            "Incorrect adjacency matrix");
@@ -1190,9 +1214,6 @@ static TEST_RESULT test_gphrx_add_edge()
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 1) == 5,
            "Incorrect adjacency matrix");
-
-    assert(directed_graph.adjacency_matrix.col_indices.size == 1, "Incorrect adjacency matrix");
-    assert(directed_graph.adjacency_matrix.row_indices.size == 1, "Incorrect adjacency matrix");
     
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 0) == 9,
            "Incorrect adjacency matrix");
@@ -1382,21 +1403,8 @@ static TEST_RESULT test_gphrx_find_occurrence_matrix()
     return TEST_PASS;
 }
 
-// TODO
 static TEST_RESULT test_approximate_gphrx()
 {
-    // u64 to_edges_7[] = {3, 2, 11, 12, 9};
-    // u64 to_edges_3[] = {1, 4, 11, 12, 5};
-    
-    // GphrxGraph undirected_graph = new_undirected_gphrx();
-
-    // gphrx_add_edge(&undirected_graph, 0, 0);
-    // gphrx_add_edge(&undirected_graph, 1, 9);
-    // gphrx_add_vertex(&undirected_graph, 7, to_edges_7, 5);
-    // gphrx_add_vertex(&undirected_graph, 3, to_edges_3, 5);    
-    // gphrx_add_edge(&undirected_graph, 10, 6);
-    // gphrx_add_edge(&undirected_graph, 10, 7);
-    
     u64 to_edges_1[] = {0, 2, 4, 7, 3};
     u64 to_edges_5[] = {6, 8, 0, 1, 5, 4, 2};
     
@@ -1406,18 +1414,36 @@ static TEST_RESULT test_approximate_gphrx()
     gphrx_add_vertex(&undirected_graph, 1, to_edges_1, 5);
     gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
 
-    char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix);
-    printf("%s\n\n", undir_adj_matrix_str);
-    free(undir_adj_matrix_str);
+    printf("Dimension: %llu\n\n", undirected_graph.adjacency_matrix.dimension);
 
-    GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.3);
+    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix));
 
-    char *approx_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&approx_graph.adjacency_matrix);
+    // This approximation doesn't seem quite right. The edges in the bottom corner are beign
+    // incorrectly set to 0.50 in the occurrence matrix when they should only be 0.25
+    GphrxGraph approx_graph1 = approximate_gphrx(&undirected_graph, 2, 0.3);
 
-    printf("%s\n", approx_adj_matrix_str);
-    free(approx_adj_matrix_str);
+    // The occurence matrix here is also making the nodes at the bottom corner of the adjacency
+    // matrix to be more than they are. They should be 2/16 = 1/8 = 0.125, but they are instead
+    // listed as 0.19
+    GphrxGraph approx_graph2 = approximate_gphrx(&undirected_graph, 4, 0.1);
 
+    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&approx_graph1.adjacency_matrix));
+    
+    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 2);
+    char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
+
+    printf("%s\n\n", occurrence_matrix_str);
+
+    occurrence_matrix = gphrx_find_occurrence_matrix(&undirected_graph, 4);
+    occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
+
+    printf("%s\n\n", occurrence_matrix_str);
+
+    printf("%s\n\n", gphrx_csr_adj_matrix_to_string(&approx_graph2.adjacency_matrix));
+           
     free_gphrx(&undirected_graph);
+
+    // TODO: Test again with directed graphs
     
     return TEST_FAIL;
 }
