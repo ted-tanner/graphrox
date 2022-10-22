@@ -247,26 +247,48 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
     
     u64 curr_idx_temp = curr_idx;
     for (; curr_idx >= 0; --curr_idx)
-    {
+    {       
         if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id || curr_idx == 0)
             break;
-        if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
+
+        if (dynarr_u64_get(row_arr, curr_idx) < to_vertex_id &&
+            curr_idx + 1 < col_arr->size &&
+            dynarr_u64_get(col_arr, curr_idx + 1) == from_vertex_id &&
+            dynarr_u64_get(row_arr, curr_idx + 1) > to_vertex_id)
+        {
+            return curr_idx + 1;
+        }
+        else if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
             return curr_idx;
     }
 
     curr_idx = curr_idx_temp;
+
+    bool was_prev_greater = false;
     if (row_arr->size != 0)
     {
-        for (; curr_idx < row_arr->size; ++curr_idx)
+        for (; curr_idx <= row_arr->size; ++curr_idx)
         {
             if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id)
-                break;
-            if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
+                return was_prev_greater ? curr_idx - 1 : curr_idx;
+            
+            if (dynarr_u64_get(row_arr, curr_idx) > to_vertex_id)
+            {
+                if (curr_idx - 1 >= 0 &&
+                    dynarr_u64_get(col_arr, curr_idx - 1) == from_vertex_id &&
+                    dynarr_u64_get(row_arr, curr_idx - 1) < to_vertex_id)
+                {
+                    return curr_idx - 1;
+                }
+                else
+                    was_prev_greater = true;
+            }
+            else if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
                 return curr_idx;
         }
     }
 
-    return curr_idx;
+    return curr_idx > row_arr->size ? row_arr->size : curr_idx;
 }
 
 DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
@@ -291,7 +313,10 @@ DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_ed
 {
     if (vertex_id + 1 > graph->adjacency_matrix.dimension)
         graph->adjacency_matrix.dimension = vertex_id + 1;
-        
+
+
+    // TODO: Considering the vertex_id is always the same, we shouldn't have to search the list for the col
+    //       every time.
     for (u64 i = 0; i < vertex_edge_count; ++i)
         gphrx_add_edge(graph, vertex_id, vertex_edges[i]);
 }
@@ -337,7 +362,7 @@ DLLEXPORT void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
 
 DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
 {
-    size_t vertex_idx = from_vertex_id >= graph->adjacency_matrix.dimension - 1
+    size_t vertex_idx = from_vertex_id > graph->adjacency_matrix.dimension - 1
         ? graph->adjacency_matrix.col_indices.size
         : index_of_vertex(&graph->adjacency_matrix.col_indices,
                           &graph->adjacency_matrix.row_indices,
@@ -345,14 +370,14 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
 
     // TODO: This will only be effective once nodes are sorted by row as well
     // TODO: Test - Add this case to test_gphrx_add_edge 
-    if (vertex_idx < graph->adjacency_matrix.col_indices.size - 1 &&
+    if (vertex_idx < graph->adjacency_matrix.col_indices.size &&
         dynarr_u64_get(&graph->adjacency_matrix.col_indices, vertex_idx) == from_vertex_id &&
         dynarr_u64_get(&graph->adjacency_matrix.row_indices, vertex_idx) == to_vertex_id)
     {
         // The edge already exists
         return;
     }
-    
+
     dynarr_u64_push_at(&graph->adjacency_matrix.col_indices, from_vertex_id, vertex_idx);
     dynarr_u64_push_at(&graph->adjacency_matrix.row_indices, to_vertex_id, vertex_idx);
     
@@ -854,7 +879,6 @@ static TEST_RESULT test_gphrx_csr_adj_matrix_to_string()
     char *undir_adj_matrix_str = gphrx_csr_adj_matrix_to_string(&undirected_graph.adjacency_matrix);
 
     char *expected_str = "[ 0, 1, 1, 0 ]\r\n[ 1, 1, 1, 1 ]\r\n[ 1, 1, 0, 1 ]\r\n[ 0, 1, 1, 0 ]";
-    printf("%s\n\n", undir_adj_matrix_str);
     assert(strcmp(undir_adj_matrix_str, expected_str) == 0, "Adjacency matrix string does not match expected");
 
     free_gphrx_byte_array(undir_adj_matrix_str);
@@ -981,15 +1005,15 @@ static TEST_RESULT test_gphrx_add_vertex()
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 2) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 3) == 3,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 3) == 2,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 4) == 2,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 4) == 3,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 5) == 100,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 5) == 9,
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 6) == 20,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 7) == 9,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 7) == 100,
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 8) == 500,
            "Incorrect adjacency matrix");
@@ -999,9 +1023,9 @@ static TEST_RESULT test_gphrx_add_vertex()
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 11) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 12) == 1001,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 12) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 13) == 7,
+    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 13) == 1001,
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 14) == 1,
            "Incorrect adjacency matrix");
@@ -1038,19 +1062,19 @@ static TEST_RESULT test_gphrx_add_vertex()
   
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 0) == 1000,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 1) == 3,
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 1) == 2,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 2) == 2,
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 2) == 3,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 3) == 100,
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 3) == 9,
            "Incorrect adjacency matrix");
     assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 4) == 20,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 5) == 9,
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 5) == 100,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 6) == 1001,
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 6) == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 7) == 7,
+    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 7) == 1001,
            "Incorrect adjacency matrix");
 
     free_gphrx(&undirected_graph);
