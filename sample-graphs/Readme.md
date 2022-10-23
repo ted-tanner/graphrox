@@ -6,6 +6,6 @@ These graphs are provided courtesy of Stanford University. Follow [this link](ht
 
 * `ca-HepPh.gphrx`, `ca-AstroPh.gphrx`
 
-J. Leskovec, J. Kleinberg and C. Faloutsos. Graph Evolution: Densification and Shrinking Diameters. ACM Transactions on Knowledge Discovery from Data (ACM TKDD), 1(1), 2007.
+    J. Leskovec, J. Kleinberg and C. Faloutsos. Graph Evolution: Densification and Shrinking Diameters. ACM Transactions on Knowledge Discovery from Data (ACM TKDD), 1(1), 2007.
 
 
