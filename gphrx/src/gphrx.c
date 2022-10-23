@@ -60,7 +60,6 @@ DLLEXPORT void free_gphrx(GphrxGraph *restrict graph)
     free_gphrx_csr_adj_matrix(&graph->adjacency_matrix);
 }
 
-// TODO: Add to Python
 DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *restrict matrix)
 {
     free_dynarr_dbl(&matrix->entries);
@@ -68,14 +67,12 @@ DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *restrict matrix)
     free_dynarr_u64(&matrix->row_indices);
 }
 
-// TODO: Add to Python
 DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *restrict matrix)
 {
     free_dynarr_u64(&matrix->col_indices);
     free_dynarr_u64(&matrix->row_indices);
 }
 
-// TODO: Add to Python (make sure to free memory)
 DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *restrict matrix, int decimal_digits)
 {
     double highest = 0.0;
@@ -151,7 +148,6 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *restrict matrix, int 
     return buffer;
 }
 
-// TODO: Add to Python (make sure to free memory)
 DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *restrict matrix)
 {
     // Each row of the matrix is represented like this: [ 0, 0, 1, 0, 1, 1, 0 ]
@@ -327,7 +323,7 @@ DLLEXPORT void gphrx_add_vertex(GphrxGraph *restrict graph, u64 vertex_id, u64 *
         graph->adjacency_matrix.dimension = vertex_id + 1;
 
     // TODO: Considering the vertex_id is always the same, we shouldn't have to search the list for the col
-    //       every time.
+    //       every time. Using a hash table will fix this
     for (u64 i = 0; i < vertex_edge_count; ++i)
         gphrx_add_edge(graph, vertex_id, vertex_edges[i]);
 }
@@ -434,7 +430,6 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_
     return GPHRX_NO_ERROR;
 }
 
-// TODO: Add to Python
 DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *restrict graph, u64 block_dimension)
 {
     if (block_dimension < 1)
@@ -493,7 +488,6 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *restrict graph
     return occurrence_matrix;
 }
 
-// TODO: Add to Python
 DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dimension, double threshold)
 {
     if (block_dimension <= 1 || graph->adjacency_matrix.col_indices.size <= 1)
