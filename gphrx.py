@@ -283,7 +283,7 @@ class GphrxDirectedGraph(GphrxGraph):
 
 if __name__ == '__main__':
     test_graph = GphrxUndirectedGraph()
-
+    
     print(test_graph.adjacency_matrix.dimension())
     print(test_graph.adjacency_matrix)
     
@@ -304,8 +304,12 @@ if __name__ == '__main__':
     test_graph.remove_edge(7, 2)
     test_graph.remove_vertex(2)
     test_graph.remove_edge(4, 3)
+    
     test_graph.shrink()
 
+    print(test_graph.adjacency_matrix._matrix.col_indices.size)
+    print(test_graph.adjacency_matrix._matrix.row_indices.size)
+    
     # TODO: Why is there still a one in the matrix?!
     print(test_graph.adjacency_matrix.dimension())
     print(test_graph.adjacency_matrix)

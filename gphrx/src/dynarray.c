@@ -18,8 +18,8 @@ DynamicArrayU64 new_dynarr_u64_with_capacity(size_t start_capacity)
 void dynarr_u64_shrink(DynamicArrayU64 *arr)
 {
     size_t new_capacity = arr->size;
-    u64 *new_arr = realloc(arr->arr, new_capacity * sizeof(64));
-
+    u64 *new_arr = realloc(arr->arr, new_capacity * sizeof(u64));
+    
     assert(new_arr != 0, "realloc failue");
     
     arr->arr = new_arr;
@@ -128,7 +128,7 @@ DynamicArrayDouble new_dynarr_dbl_with_capacity(size_t start_capacity)
 void dynarr_dbl_shrink(DynamicArrayDouble *arr)
 {
     size_t new_capacity = arr->size;
-    double *new_arr = realloc(arr->arr, new_capacity * sizeof(64));
+    double *new_arr = realloc(arr->arr, new_capacity * sizeof(double));
 
     assert(new_arr != 0, "realloc failue");
     
