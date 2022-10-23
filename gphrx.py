@@ -138,14 +138,14 @@ class GphrxOccurrenceMatrix:
     def dimension(self):
         return self._matrix.dimension
 
-    def to_string_with_precision(precision):
+    def to_string_with_precision(self, precision):
         c_str = _gphrx_lib.gphrx_csr_matrix_to_string(self._matrix, precision)
         py_str = ctypes.cast(c_str, ctypes.c_char_p).value
         _gphrx_lib.free_gphrx_byte_array(c_str)
         return py_str.decode('utf-8')
 
     def __str__(self):
-        return to_string_with_precision(2)
+        return self.to_string_with_precision(2)
     
     def __del__(self):
         _gphrx_lib.free_gphrx_csr_matrix(self._matrix)
@@ -230,11 +230,10 @@ class GphrxGraph:
             raise ValueError("Edge from vertex " + str(from_vertex_id) +
                              " to vertex " + str(to_vertex_id) + " does not exist")
 
-    # TODO
     def find_occurrence_matrix(self, block_dimension):
-        pass
-
-    # TODO: Test
+        c_matrix = _gphrx_lib.gphrx_find_occurrence_matrix(self._graph, block_dimension)
+        return GphrxOccurrenceMatrix(c_matrix)
+        
     def approximate(self, block_dimension, threshold):
         c_graph = _gphrx_lib.approximate_gphrx(self._graph, block_dimension, threshold)
         graph = GphrxUndirectedGraph() if c_graph.is_undirected else GphrxDirectedGraph()
@@ -294,19 +293,21 @@ if __name__ == '__main__':
     test_graph = test_graph.duplicate()
     test_graph.add_edge(0, 1)
     print(test_graph.does_edge_exist(3, 4))
-
+    print()
+    
     # test_graph.save_to_file('./test_graph.gphrx')
 
-    print(test_graph.adjacency_matrix.dimension())
     print(test_graph.adjacency_matrix)
+    print()
+    
+    print(test_graph.approximate(3, 0.3).adjacency_matrix)
+    print()
     
     test_graph.remove_edge(7, 2)
     test_graph.remove_vertex(2)
+    test_graph.shrink()
     test_graph.remove_edge(4, 3)
     
-    test_graph.shrink()
-
-    print(test_graph.adjacency_matrix.dimension())
     print(test_graph.adjacency_matrix)
 
     test_graph2 = GphrxGraph.from_bytes(bytes(test_graph))
