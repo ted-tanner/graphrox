@@ -288,8 +288,7 @@ if __name__ == '__main__':
     print(test_graph.adjacency_matrix)
     
     test_graph.add_edge(4, 3)
-    # TODO: Why does this next line segfault
-    # test_graph.add_edge(5, 5)
+    test_graph.add_edge(5, 5)
     test_graph.add_vertex(2, [1, 6, 7, 3, 0])
     test_graph.add_vertex(8)
     test_graph = test_graph.duplicate()
@@ -307,10 +306,6 @@ if __name__ == '__main__':
     
     test_graph.shrink()
 
-    print(test_graph.adjacency_matrix._matrix.col_indices.size)
-    print(test_graph.adjacency_matrix._matrix.row_indices.size)
-    
-    # TODO: Why is there still a one in the matrix?!
     print(test_graph.adjacency_matrix.dimension())
     print(test_graph.adjacency_matrix)
 

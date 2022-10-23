@@ -26,7 +26,7 @@ DLLEXPORT GphrxGraph new_directed_gphrx()
     return new_gphrx(false);
 }
 
-DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph)
+DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *restrict graph)
 {
     size_t edge_count = graph->adjacency_matrix.col_indices.size;
         
@@ -55,13 +55,13 @@ DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph)
     return duplicate_graph;
 }
 
-DLLEXPORT void free_gphrx(GphrxGraph *graph)
+DLLEXPORT void free_gphrx(GphrxGraph *restrict graph)
 {
     free_gphrx_csr_adj_matrix(&graph->adjacency_matrix);
 }
 
 // TODO: Add to Python
-DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *matrix)
+DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *restrict matrix)
 {
     free_dynarr_dbl(&matrix->entries);
     free_dynarr_u64(&matrix->col_indices);
@@ -69,14 +69,14 @@ DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *matrix)
 }
 
 // TODO: Add to Python
-DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix)
+DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *restrict matrix)
 {
     free_dynarr_u64(&matrix->col_indices);
     free_dynarr_u64(&matrix->row_indices);
 }
 
 // TODO: Add to Python (make sure to free memory)
-DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, int decimal_digits)
+DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *restrict matrix, int decimal_digits)
 {
     double highest = 0.0;
     for (size_t i = 0; i < matrix->entries.size; ++i)
@@ -152,7 +152,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, int decimal_d
 }
 
 // TODO: Add to Python (make sure to free memory)
-DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix)
+DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *restrict matrix)
 {
     // Each row of the matrix is represented like this: [ 0, 0, 1, 0, 1, 1, 0 ]
     const size_t extra_chars_per_row_at_front = 2; // '[ '
@@ -209,7 +209,7 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix)
     return buffer;
 }
 
-DLLEXPORT void gphrx_shrink(GphrxGraph *graph)
+DLLEXPORT void gphrx_shrink(GphrxGraph *restrict graph)
 {
     dynarr_u64_shrink(&graph->adjacency_matrix.col_indices);
     dynarr_u64_shrink(&graph->adjacency_matrix.row_indices);
@@ -250,7 +250,7 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
                               u64 from_vertex_id, u64 to_vertex_id)
 {
     size_t curr_idx = index_of_edge(col_arr, from_vertex_id);
-    
+
     u64 curr_idx_temp = curr_idx;
     for (; curr_idx >= 0; --curr_idx)
     {       
@@ -282,11 +282,11 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
         for (; curr_idx <= row_arr->size; ++curr_idx)
         {
             if (dynarr_u64_get(col_arr, curr_idx) != from_vertex_id)
-                return was_prev_greater ? curr_idx - 1 : curr_idx;
+                return was_prev_greater && curr_idx != 0 ? curr_idx - 1 : curr_idx;
             
             if (dynarr_u64_get(row_arr, curr_idx) > to_vertex_id)
             {
-                if (curr_idx - 1 >= 0 &&
+                if (curr_idx != 0 &&
                     dynarr_u64_get(col_arr, curr_idx - 1) == from_vertex_id &&
                     dynarr_u64_get(row_arr, curr_idx - 1) < to_vertex_id)
                 {
@@ -298,12 +298,12 @@ static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr
             else if (dynarr_u64_get(row_arr, curr_idx) == to_vertex_id)
                 return curr_idx;
         }
-    }
+    }    
 
     return curr_idx > row_arr->size ? row_arr->size : curr_idx;
 }
 
-DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
+DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id)
 {
     if (from_vertex_id > graph->adjacency_matrix.dimension || to_vertex_id > graph->adjacency_matrix.dimension)
         return false;
@@ -321,7 +321,7 @@ DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 
     return false;
 }
 
-DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count)
+DLLEXPORT void gphrx_add_vertex(GphrxGraph *restrict graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count)
 {
     if (vertex_id + 1 > graph->adjacency_matrix.dimension)
         graph->adjacency_matrix.dimension = vertex_id + 1;
@@ -332,7 +332,7 @@ DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_ed
         gphrx_add_edge(graph, vertex_id, vertex_edges[i]);
 }
 
-DLLEXPORT void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
+DLLEXPORT void gphrx_remove_vertex(GphrxGraph *restrict graph, u64 vertex_id)
 {
     size_t vertex_idx = index_of_edge(&graph->adjacency_matrix.col_indices, vertex_id);
     size_t first_edge_idx = vertex_idx;
@@ -371,9 +371,10 @@ DLLEXPORT void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id)
         --graph->adjacency_matrix.dimension;
 }
 
-DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
+DLLEXPORT void gphrx_add_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id)
 {
-    size_t vertex_idx = from_vertex_id > graph->adjacency_matrix.dimension - 1
+    u64 matrix_dimension = graph->adjacency_matrix.dimension;
+    size_t vertex_idx = (matrix_dimension != 0 && from_vertex_id > matrix_dimension - 1)
         ? graph->adjacency_matrix.col_indices.size
         : index_of_vertex(&graph->adjacency_matrix.col_indices,
                           &graph->adjacency_matrix.row_indices,
@@ -407,7 +408,7 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vert
         graph->adjacency_matrix.dimension = to_vertex_id + 1;
 }
 
-DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id)
+DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id)
 {
     size_t vertex_idx = index_of_vertex(&graph->adjacency_matrix.col_indices,
                                         &graph->adjacency_matrix.row_indices,
@@ -434,7 +435,7 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id
 }
 
 // TODO: Add to Python
-DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 block_dimension)
+DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *restrict graph, u64 block_dimension)
 {
     if (block_dimension < 1)
         block_dimension = 1;
@@ -493,7 +494,7 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
 }
 
 // TODO: Add to Python
-DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, double threshold)
+DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dimension, double threshold)
 {
     if (block_dimension <= 1 || graph->adjacency_matrix.col_indices.size <= 1)
         return duplicate_gphrx(graph);
@@ -542,7 +543,7 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, d
     return approx_graph;
 }
 
-DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph)
+DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *restrict graph)
 {
     GphrxByteArrayHeader header = {
         .magic_number = GPHRX_HEADER_MAGIC_NUMBER,
@@ -617,7 +618,7 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph)
     return buffer;
 }
 
-DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
+DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *restrict arr, GphrxErrorCode *restrict error)
 {
     *error = GPHRX_NO_ERROR;
     GphrxGraph graph = {
@@ -701,7 +702,7 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error)
     return graph;
 }
 
-DLLEXPORT void free_gphrx_byte_array(void *arr)
+DLLEXPORT void free_gphrx_byte_array(void *restrict arr)
 {
     free(arr);
 }
@@ -1560,6 +1561,9 @@ static TEST_RESULT test_gphrx_to_from_byte_array()
                undir_graph_from_arr.adjacency_matrix.row_indices.arr[i],
                "Incorrectly loaded graph adjacency matrix");
     }
+
+    free_gphrx(&undir_graph_from_arr);
+    free_gphrx(&undirected_graph);
     
     GphrxGraph directed_graph = new_directed_gphrx();
     
@@ -1597,9 +1601,13 @@ static TEST_RESULT test_gphrx_to_from_byte_array()
                dir_graph_from_arr.adjacency_matrix.row_indices.arr[i],
                "Incorrectly loaded graph adjacency matrix");
     }
+
+    free_gphrx(&dir_graph_from_arr);
+    free_gphrx(&directed_graph);
     
     return TEST_PASS;
 }
+      
 
 ModuleTestSet gphrx_h_register_tests()
 {

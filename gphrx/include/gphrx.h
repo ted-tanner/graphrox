@@ -85,73 +85,73 @@ DLLEXPORT GphrxGraph new_directed_gphrx();
 /**
  * Creates a copy of the given GraphRox graph.
  */
-DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *graph);
+DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *restrict graph);
 
 /**
  * Frees the memory used by the given graph.
  */
-DLLEXPORT void free_gphrx(GphrxGraph *graph);
+DLLEXPORT void free_gphrx(GphrxGraph *restrict graph);
 
 /**
  * Frees the memory used by the given GphrxCsrMatrix.
  */
-DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *matrix);
+DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *restrict matrix);
 
 /**
  * Frees the memory used by the given GphrxCsrAdjacencyMatrix.
  */
-DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *matrix);
+DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *restrict matrix);
 
 /**
  * Converts the given GphrxCsrMatrix to a string representation.
  */
-DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *matrix, int decimal_digits);
+DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *restrict matrix, int decimal_digits);
 
 /**
  * Converts the given GphrxCsrAdjacencyMatrix to a string representation.
  */
-DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *matrix);
+DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *restrict matrix);
 
 /**
  * Frees up excess memory used by the lists that describe the graph. This can substantially reduce memory
  * usage for graphs that are static (meaning edges and vertices are no longer being added), but can make
  * subsequent modifications to the graph slower.
  */
-DLLEXPORT void gphrx_shrink(GphrxGraph *graph);
+DLLEXPORT void gphrx_shrink(GphrxGraph *restrict graph);
 
 /**
  * Returns `true` if an edge with the given to and from vertex IDs exists and `false` otherwise.
  */
-DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id);
 
 /**
  * Adds a vertex to the given graph.
  */
-DLLEXPORT void gphrx_add_vertex(GphrxGraph *graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count);
+DLLEXPORT void gphrx_add_vertex(GphrxGraph *restrict graph, u64 vertex_id, u64 *vertex_edges, u64 vertex_edge_count);
 
 /**
  * Removes a vertex from the given graph.
  */
-DLLEXPORT void gphrx_remove_vertex(GphrxGraph *graph, u64 vertex_id);
+DLLEXPORT void gphrx_remove_vertex(GphrxGraph *restrict graph, u64 vertex_id);
 
 /**
  * Adds a link between two vertices. The "from" and "to" qualifiers on parameter names are only significant
  * when the graph is directed.
  */
-DLLEXPORT void gphrx_add_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+DLLEXPORT void gphrx_add_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id);
 
 /**
  * Removes a link between two vertices. The "from" and "to" qualifiers on parameter names are only
  * significant when the graph is directed.
  */
-DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *graph, u64 from_vertex_id, u64 to_vertex_id);
+DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id);
 
 /**
  * Returns an occurrence matrix for a given graph given a block dimension. The block_dimension parameter
  * determines the size of the blocks the graph's adjacency matrix will be split into to generate the
  * occurrence matrix. See the documentation for the approximate_gphrx function for more information.
  */
-DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 block_dimension);
+DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *restrict graph, u64 block_dimension);
 
 /**
  * Generates an approximation of a graph. This is where the magic of GraphRox happens.
@@ -166,24 +166,24 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *graph, u64 blo
  * @param threshold is the percentage of entries in a block that must be non-zero for the block to be
  * represented by a one in the approximated adjacency matrix.
  */
-DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *graph, u64 block_dimension, double threshold);
+DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dimension, double threshold);
 
 /**
  * Converts the given GphrxGraph to a big-endian byte array representation.
  */
-DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *graph);
+DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *restrict graph);
 
 /**
  * Converts the given byte array from big-endian byte array representation of a GphrxGraph to a GphrxGraph.
  */
-DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *arr, GphrxErrorCode *error);
+DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *restrict arr, GphrxErrorCode *restrict error);
 
 /**
  * Calls the C standard library `free()` on the provided pointer. This function is only intended for use by
  * foreign function interfaces for other languages importing GraphRox as a dynamic link library so they can
  * free memory allocated for byte arrays created by the `gphrx_from_byte_array()` function.
  */
-DLLEXPORT void free_gphrx_byte_array(void *arr);
+DLLEXPORT void free_gphrx_byte_array(void *restrict arr);
 
 
 #ifdef TEST_MODE
