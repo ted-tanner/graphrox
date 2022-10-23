@@ -43,6 +43,8 @@ typedef struct {
     u8 is_weighted;
 } GphrxByteArrayHeader;
 
+// TODO: These matricies should really be hash tables so we don't have to perform a log(n) search to find anything. Hash the column index and use a list of row indices (along with entries for a weighted graph) as the value. We can perform a binary search on the row indices because that search will be much smaller.
+// TODO: Once the hash table are in place, it will be feasible to use a weighted matrix for the occurrence matrix when generati by the occurrence probability matrix
 /**
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
@@ -52,7 +54,6 @@ typedef struct {
     DynamicArrayU64 row_indices;
 } GphrxCsrAdjacencyMatrix;
 
-// TODO: Add to Python
 /**
  * Compress Space Row formatted matrix stored with dynamic arrays.
  */
