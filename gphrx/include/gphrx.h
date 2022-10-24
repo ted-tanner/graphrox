@@ -6,8 +6,11 @@
 #include <string.h>
 
 #include "assert.h"
+#include "csrmatrix.h"
 #include "dynarray.h"
 #include "intrinsics.h"
+
+// TODO: HashTable for matrix columns
 
 // TODO: In separate file, create a GphrxWeightedGraph struct and wgphrx_* functions. For
 //       approximation, the entries in the approximated GphrxWeightedGraph will be averaged
@@ -45,24 +48,6 @@ typedef struct {
 
 // TODO: These matricies should really be hash tables so we don't have to perform a log(n) search to find anything. Hash the column index and use a list of row indices (along with entries for a weighted graph) as the value. We can perform a binary search on the row indices because that search will be much smaller.
 // TODO: Once the hash table are in place, it will be feasible to use a weighted matrix for the occurrence matrix when generati by the occurrence probability matrix
-/**
- * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
- */
-typedef struct {
-    u64 dimension;
-    DynamicArrayU64 col_indices;
-    DynamicArrayU64 row_indices;
-} GphrxCsrAdjacencyMatrix;
-
-/**
- * Compress Space Row formatted matrix stored with dynamic arrays.
- */
-typedef struct {
-    u64 dimension;
-    DynamicArrayDouble entries;
-    DynamicArrayU64 col_indices;
-    DynamicArrayU64 row_indices; 
-} GphrxCsrMatrix;
 
 /**
  * Metadata and representation of a graph.

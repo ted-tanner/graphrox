@@ -211,7 +211,7 @@ DLLEXPORT void gphrx_shrink(GphrxGraph *restrict graph)
     dynarr_u64_shrink(&graph->adjacency_matrix.row_indices);
 }
 
-static size_t index_of_edge(DynamicArrayU64 *arr, u64 vertex_id)
+static size_t index_of_edge(DynamicArray_u64 *arr, u64 vertex_id)
 {
     size_t low = 0;
     size_t high = arr->size;
@@ -242,7 +242,7 @@ static size_t index_of_edge(DynamicArrayU64 *arr, u64 vertex_id)
     return middle;
 }
 
-static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr,
+static size_t index_of_vertex(DynamicArray_u64 *col_arr, DynamicArray_u64 *row_arr,
                               u64 from_vertex_id, u64 to_vertex_id)
 {
     size_t curr_idx = index_of_edge(col_arr, from_vertex_id);
