@@ -15,6 +15,8 @@ if __name__ == '__main__':
     graph = gphrx.GphrxUndirectedGraph()
 
     graph.add_edge(7, 8)
+    graph.add_edge(5, 5)
+    graph.add_edge(5, 4)
     graph.add_vertex(1, [0, 2, 4, 7, 3])
     graph.add_vertex(5, [6, 8, 0, 1, 5, 4, 2])
 
@@ -22,16 +24,16 @@ if __name__ == '__main__':
     print(graph.adjacency_matrix)
     print()
 
-    print("2x2-block Occurrence Probability Matrix")
-    print(graph.find_occurrence_matrix(2))
+    print("2x2-block Occurrence Proportion Matrix")
+    print(graph.find_occurrence_proportion_matrix(2))
     print()
 
     print("Approximation using 2x2 blocks and a threshold of 0.3")
     print(graph.approximate(2, 0.3).adjacency_matrix)
     print()
 
-    print("3x3-block Occurrence Probability Matrix")
-    print(graph.find_occurrence_matrix(3))
+    print("3x3-block Occurrence Proportion Matrix")
+    print(graph.find_occurrence_proportion_matrix(3))
     print()
 
     print("Approximation using 3x3 blocks and a threshold of 0.2")
@@ -53,8 +55,8 @@ if __name__ == '__main__':
     print("This graph has " + str(graph.node_count()) + " nodes and " + str(graph.edge_count()) + " edges")
     print()
 
-    print("Approximation using 10000x10000 blocks and a threshold of 0.00004")
-    print(graph.approximate(10000, 0.00004).adjacency_matrix)
+    print("Approximation using 1500x1500 blocks and a threshold of 0.0017")
+    print(graph.approximate(1500, 0.0017).adjacency_matrix)
     print()
 
     print("--------------------------------------------------------------------------------")
@@ -71,8 +73,8 @@ if __name__ == '__main__':
     print("This graph has " + str(graph.node_count()) + " nodes and " + str(graph.edge_count()) + " edges")
     print()
 
-    print("Approximation using 10000x10000 blocks and a threshold of 0.00003")
-    print(graph.approximate(10000, 0.00003).adjacency_matrix)
+    print("Approximation using 2000x2000 blocks and a threshold of 0.00115")
+    print(graph.approximate(2000, 0.00115).adjacency_matrix)
     print()
 
     print()

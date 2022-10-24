@@ -19,8 +19,6 @@
 
 // TODO: Split matrices into their own files gphrx_matrix.h gphrx_matrix.c
 
-// TODO: Should the occurrence matrix be renamed the "occurrence probability matrix"?
-
 /** Error codes */
 typedef u8 GphrxErrorCode;
 
@@ -44,7 +42,7 @@ typedef struct {
 } GphrxByteArrayHeader;
 
 // TODO: These matricies should really be hash tables so we don't have to perform a log(n) search to find anything. Hash the column index and use a list of row indices (along with entries for a weighted graph) as the value. We can perform a binary search on the row indices because that search will be much smaller.
-// TODO: Once the hash table are in place, it will be feasible to use a weighted matrix for the occurrence matrix when generati by the occurrence probability matrix
+// TODO: Once the hash table are in place, it will be feasible to use a weighted matrix for the occurrence matrix when generating the occurrence proportion matrix
 /**
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
@@ -148,11 +146,11 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u6
 DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id);
 
 /**
- * Returns an occurrence matrix for a given graph given a block dimension. The block_dimension parameter
- * determines the size of the blocks the graph's adjacency matrix will be split into to generate the
- * occurrence matrix. See the documentation for the approximate_gphrx function for more information.
+ * Returns an occurrence proportion matrix for a given graph given a block dimension. The block_dimension
+ * parameter determines the size of the blocks the graph's adjacency matrix will be split into to generate
+ * the matrix. See the documentation for the approximate_gphrx function for more information.
  */
-DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_matrix(GphrxGraph *restrict graph, u64 block_dimension);
+DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *restrict graph, u64 block_dimension);
 
 /**
  * Generates an approximation of a graph. This is where the magic of GraphRox happens.
