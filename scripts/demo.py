@@ -5,7 +5,11 @@ from graphrox import gphrx
 
 
 if __name__ == '__main__':
-    print("Graphrox Demo")
+    print("GraphRox Demo")
+    print()
+
+    print("GraphRox is a C library (with a Python wrapper) for generating approximations")
+    print("of graphs for the purpose of fast graph calculations.")
     print()
 
     graph = gphrx.GphrxUndirectedGraph()
