@@ -1,4 +1,7 @@
-import gphrx
+import sys
+ 
+sys.path.append('../')
+from graphrox import gphrx
 
 
 # Reads a graph from a text file. Any lines beginning with a pound (#) will be ignored. Each line is

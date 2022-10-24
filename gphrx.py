@@ -180,6 +180,13 @@ class GphrxGraph:
         # _gphrx_lib.free_gphrx(self._graph)
         pass
 
+    def node_count(self):
+        return self.adjacency_matrix.dimension()
+
+    def edge_count(self):
+        edges = self._graph.adjacency_matrix.col_indices.size 
+        return int(edges / 2) if self.is_undirected else edges
+
     @staticmethod
     def from_bytes(byte_array):
         error_code = ctypes.c_uint8()
