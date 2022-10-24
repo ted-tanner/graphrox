@@ -23,8 +23,6 @@ if __name__ == '__main__':
     print()
 
     print("2x2-block Occurrence Probability Matrix")
-    print()
-
     print(graph.find_occurrence_matrix(2))
     print()
 
@@ -33,8 +31,6 @@ if __name__ == '__main__':
     print()
 
     print("3x3-block Occurrence Probability Matrix")
-    print()
-    
     print(graph.find_occurrence_matrix(3))
     print()
 
