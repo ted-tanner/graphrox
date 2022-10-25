@@ -32,7 +32,7 @@ typedef unsigned char byte;
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__CYGWIN__)
-#define DLLEXPORT __declspec(dllimport)
+#define DLLEXPORT __declspec(dllexport)
 #elif defined(__GNUC__) || defined(__GNUG__) || defined(__clang__)
 #define DLLEXPORT __attribute__((visibility ("default")))
 #endif

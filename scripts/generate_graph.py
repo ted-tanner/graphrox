@@ -52,3 +52,39 @@ def graph_from_text_file(file_name, out_file_name):
     graph.save_to_file(out_file_name)
 
 
+def verify_graph(text_file_name, gphrx_file_name):
+    id_pairs = []
+    with open(text_file_name, 'r') as file:
+        for line in file:
+            if line.startswith('#'):
+                continue
+
+            ids = line.split()
+
+            if len(ids) != 2:
+                continue
+
+            try:
+                id0 = int(ids[0])
+                id1 = int(ids[1])
+            except ValueError:
+                continue
+
+            id_pairs.append((id0, id1))
+
+    id_pairs.sort()
+    id_max = id_pairs[-1][0]
+
+    id_to_new_id_map = np.full(id_max + 1, -1, dtype=int)
+
+    new_id = 0
+    for id_pair in id_pairs:
+        if id_to_new_id_map[id_pair[0]] == -1:
+            id_to_new_id_map[id_pair[0]] = new_id
+            new_id += 1
+
+    graph = gphrx.GphrxGraph.load_from_file(gphrx_file_name)
+
+    for id_pair in id_pairs:
+        if not graph.does_edge_exist(id_to_new_id_map[id0], id_to_new_id_map[id1]):
+            print("Missing edge " + str(id0) + "-" + str(id1))
