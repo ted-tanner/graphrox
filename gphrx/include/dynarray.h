@@ -7,26 +7,38 @@
 #include "assert.h"
 #include "intrinsics.h"
 
+// 8-byte value array
+typedef union {
+    u64 u64_val;
+    double double_val;
+} byteval8;
+
 typedef struct {
     size_t capacity;
     size_t size;
-    u64 *arr;
-} DynamicArray_u64;
+    byteval8 *arr;
+} DynamicArray8;
 
+// 16-byte value array
 typedef struct {
     u64 u64_val;
     double double_val;
 } Tuple_u64_double;
 
+typedef union {
+    Tuple_u64_double tuple_val;
+} byteval16;
+
 typedef struct {
     size_t capacity;
     size_t size;
-    Tuple_u64_double *arr;
-} DynamicArray_u64_double;
+    byteval16 *arr;
+} DynamicArray16;
 
+// Table entry array
 typedef union {
-    DynamicArray_u64 u64_arr;
-    DynamicArray_u64_double tuple_arr;
+    DynamicArray8 arr8;
+    DynamicArray16 arr16;
 } TableEntryData;
 
 typedef struct {
@@ -40,51 +52,51 @@ typedef struct {
     TableEntry *arr;
 } DynamicArray_TableEntry;
 
-/** u64 */
-#define new_dynarr_u64() new_dynarr_u64_with_capacity(1)
-#define free_dynarr_u64(arr_ptr) free((arr_ptr)->arr)
+/** 8-byte value array */
+#define new_dynarr8() new_dynarr8_with_capacity(1)
+#define free_dynarr8(arr_ptr) free((arr_ptr)->arr)
 
-#define dynarr_u64_push(arr_ptr, item) _dynarr_u64_push_at((arr_ptr), item, (arr_ptr)->size)
-#define dynarr_u64_push_at(arr_ptr, item, idx) _dynarr_u64_push_at((arr_ptr), item, (idx))
+#define dynarr8_push(arr_ptr, item) _dynarr8_push_at((arr_ptr), item, (arr_ptr)->size)
+#define dynarr8_push_at(arr_ptr, item, idx) _dynarr8_push_at((arr_ptr), item, (idx))
 
-#define dynarr_u64_get(arr_ptr, pos) ((arr_ptr)->arr[pos])
-#define dynarr_u64_get_ptr(arr_ptr, pos) ((arr_ptr)->arr + (pos))
-#define dynarr_u64_pop(arr_ptr) ((arr_ptr)->arr[--((arr_ptr)->size)])
+#define dynarr8_get(arr_ptr, pos) ((arr_ptr)->arr[pos])
+#define dynarr8_get_ptr(arr_ptr, pos) ((arr_ptr)->arr + (pos))
+#define dynarr8_pop(arr_ptr) ((arr_ptr)->arr[--((arr_ptr)->size)])
 
-DynamicArray_u64 new_dynarr_u64_with_capacity(size_t start_capacity);
+DynamicArray8 new_dynarr8_with_capacity(size_t start_capacity);
 
-void dynarr_u64_shrink(DynamicArray_u64 *arr);
-void dynarr_u64_expand(DynamicArray_u64 *arr, size_t desired_capacity);
-void dynarr_u64_grow_and_zero(DynamicArray_u64 *arr, size_t desired_size);
+void dynarr8_shrink(DynamicArray8 *arr);
+void dynarr8_expand(DynamicArray8 *arr, size_t desired_capacity);
+void dynarr8_grow_and_zero(DynamicArray8 *arr, size_t desired_size);
 
-void dynarr_u64_push_multiple(DynamicArray_u64 *arr, u64 *item_arr, size_t count);
-void dynarr_u64_remove_at(DynamicArray_u64 *arr, size_t idx);
-void dynarr_u64_remove_multiple_at(DynamicArray_u64 *arr, size_t start_idx, size_t count);
+void dynarr8_push_multiple(DynamicArray8 *arr, byteval8 *item_arr, size_t count);
+void dynarr8_remove_at(DynamicArray8 *arr, size_t idx);
+void dynarr8_remove_multiple_at(DynamicArray8 *arr, size_t start_idx, size_t count);
 
-void _dynarr_u64_push_at(DynamicArray_u64 *arr, u64 item, size_t idx);
+void _dynarr8_push_at(DynamicArray8 *arr, byteval8 item, size_t idx);
 
-/** u64-double tuple */
-#define new_dynarr_u64_dbl() new_dynarr_u64_dbl_with_capacity(1)
-#define free_dynarr_u64_dbl(arr_ptr) free((arr_ptr)->arr)
+/** 16-byte value array */
+#define new_dynarr16() new_dynarr16_with_capacity(1)
+#define free_dynarr16(arr_ptr) free((arr_ptr)->arr)
 
-#define dynarr_u64_dbl_push(arr_ptr, item) _dynarr_u64_dbl_push_at((arr_ptr), item, (arr_ptr)->size)
-#define dynarr_u64_dbl_push_at(arr_ptr, item, idx) _dynarr_u64_dbl_push_at((arr_ptr), item, (idx))
+#define dynarr16_push(arr_ptr, item) _dynarr16_push_at((arr_ptr), item, (arr_ptr)->size)
+#define dynarr16_push_at(arr_ptr, item, idx) _dynarr16_push_at((arr_ptr), item, (idx))
 
-#define dynarr_u64_dbl_get(arr_ptr, pos) ((arr_ptr)->arr[pos])
-#define dynarr_u64_dbl_get_ptr(arr_ptr, pos) ((arr_ptr)->arr + (pos))
-#define dynarr_u64_dbl_pop(arr_ptr) ((arr_ptr)->arr[--((arr_ptr)->size)])
+#define dynarr16_get(arr_ptr, pos) ((arr_ptr)->arr[pos])
+#define dynarr16_get_ptr(arr_ptr, pos) ((arr_ptr)->arr + (pos))
+#define dynarr16_pop(arr_ptr) ((arr_ptr)->arr[--((arr_ptr)->size)])
 
-DynamicArray_u64_double new_dynarr_u64_dbl_with_capacity(size_t start_capacity);
+DynamicArray16 new_dynarr16_with_capacity(size_t start_capacity);
 
-void dynarr_u64_dbl_shrink(DynamicArray_u64_double *arr);
-void dynarr_u64_dbl_expand(DynamicArray_u64_double *arr, size_t desired_capacity);
-void dynarr_u64_dbl_grow_and_zero(DynamicArray_u64_double *arr, size_t desired_size);
+void dynarr16_shrink(DynamicArray16 *arr);
+void dynarr16_expand(DynamicArray16 *arr, size_t desired_capacity);
+void dynarr16_grow_and_zero(DynamicArray16 *arr, size_t desired_size);
 
-void dynarr_u64_dbl_push_multiple(DynamicArray_u64_double *arr, Tuple_u64_double *item_arr, size_t count);
-void dynarr_u64_dbl_remove_at(DynamicArray_u64_double *arr, size_t idx);
-void dynarr_u64_dbl_remove_multiple_at(DynamicArray_u64_double *arr, size_t start_idx, size_t count);
+void dynarr16_push_multiple(DynamicArray16 *arr, byteval16 *item_arr, size_t count);
+void dynarr16_remove_at(DynamicArray16 *arr, size_t idx);
+void dynarr16_remove_multiple_at(DynamicArray16 *arr, size_t start_idx, size_t count);
 
-void _dynarr_u64_dbl_push_at(DynamicArray_u64_double *arr, Tuple_u64_double item, size_t idx);
+void _dynarr16_push_at(DynamicArray16 *arr, byteval16 item, size_t idx);
 
 /** u64-double tuple */
 #define new_dynarr_table_entry() new_dynarr_u64_dbl_with_capacity(1)
