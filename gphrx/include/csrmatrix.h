@@ -9,10 +9,21 @@
 #include "dynarray.h"
 #include "intrinsics.h"
 
+// Table entry array
+typedef union {
+    DynamicArray8 arr8;
+    DynamicArray16 arr16;
+} TableEntryData;
+
+typedef struct {
+    u64 key;
+    TableEntryData val;
+} TableEntry;
+
 typedef struct {
     size_t size;
     size_t active_items;
-    DynamicArray_TableEntry *table;
+    TableEntry *table;
 } HashTable;
 
 /**

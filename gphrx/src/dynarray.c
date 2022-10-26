@@ -220,116 +220,6 @@ void _dynarr16_push_at(DynamicArray16 *arr, byteval16 item, size_t idx)
     ++arr->size;
 }
 
-DynamicArray_TableEntry new_dynarr_table_entry_with_capacity(size_t start_capacity)
-{
-    double *arr = malloc(sizeof(TableEntry) * start_capacity);
-
-    assert(arr != 0, "malloc failure");
-
-    DynamicArray_TableEntry vec = {
-        .capacity = start_capacity,
-        .size = 0,
-        .arr = arr,
-    };
-    
-    return vec;
-}
-
-void dynarr_table_entry_shrink(DynamicArray_TableEntry *arr)
-{
-    size_t new_capacity = arr->size;
-    TableEntry *new_arr = realloc(arr->arr, new_capacity * sizeof(TableEntry));
-
-    assert(new_arr != 0, "realloc failue");
-    
-    arr->arr = new_arr;
-    arr->capacity = new_capacity;
-}
-
-void dynarr_table_entry_expand(DynamicArray_TableEntry *arr, size_t desired_capacity)
-{
-    if (desired_capacity <= arr->capacity)
-        return;
-    
-    TableEntry *new_arr = realloc(arr->arr, desired_capacity * sizeof(TableEntry));
-    
-    assert(new_arr != 0, "realloc failue");
-    
-    arr->arr = new_arr;
-    arr->capacity = desired_capacity;
-}
-
-void dynarr_table_entry_grow_and_zero(DynamicArray_TableEntry* arr, size_t desired_size)
-{
-    if (desired_size <= arr->size)
-        return;
-    
-    dynarr_table_entry_expand(arr, desired_size);
-    
-    size_t delta = desired_size - arr->size;
-    memset(arr->arr + arr->size, 0, delta);
-    
-    arr->size = desired_size;
-}
-
-void dynarr_table_entry_push_multiple(DynamicArray_TableEntry *arr, TableEntry *item_arr, size_t count)
-{
-    if (arr->size + count >= arr->capacity)
-    {
-        size_t new_capacity = arr->capacity * 2;
-        for(; new_capacity < arr->size + count; new_capacity *= 2);
-
-        TableEntry *new_arr = realloc(arr->arr, new_capacity * sizeof(TableEntry));
-
-        assert(new_arr != 0, "realloc failue");
-
-        arr->arr = new_arr;
-        arr->capacity = new_capacity;
-    }
-
-    memcpy(arr->arr + arr->size, item_arr, count * sizeof(TableEntry));
-    arr->size += count;
-}
-
-void dynarr_table_entry_remove_at(DynamicArray_TableEntry *arr, size_t idx)
-{
-    assert(arr->size > idx, "Invalid array index");
-    memmove(arr->arr + idx, arr->arr + idx + 1, (arr->size - idx - 1) * sizeof(TableEntry));
-    --arr->size;
-}
-
-void dynarr_table_entry_remove_multiple_at(DynamicArray_TableEntry *arr, size_t start_idx, size_t count)
-{
-    assert(arr->size >= start_idx + count, "Invalid array index or count");
-    memmove(arr->arr + start_idx,
-            arr->arr + start_idx + count,
-            (arr->size - start_idx - count) * sizeof(TableEntry));
-    arr->size -= count;
-}
-
-void _dynarr_table_entry_push_at(DynamicArray_TableEntry *arr, TableEntry item, size_t idx)
-{
-    assert(arr->size >= idx, "Invalid array index");
-    
-    if (arr->size == arr->capacity)
-    {
-        TableEntry *new_arr = realloc(arr->arr, arr->capacity * sizeof(TableEntry) * 2);
-
-        assert(new_arr != 0, "realloc failue");
-
-        arr->arr = new_arr;
-        arr->capacity *= 2;
-    }
-
-    TableEntry *location = arr->arr + idx;
-    
-    if (idx != arr->size)
-        memmove(location + 1, location, (arr->size - idx) * sizeof(TableEntry));
-
-    arr->arr[idx] = item;
-    ++arr->size;
-}
-
 #ifdef TEST_MODE
 
 static TEST_RESULT test_new_dynarr8() {
@@ -340,7 +230,7 @@ static TEST_RESULT test_new_dynarr8() {
     assert(arr.arr != 0, "Null array pointer");
 
     // This size will exceed page size on practically all systems, so segmentation
-    // faults for stepping out of bounds are possible
+    // faults for stepping out of bounds are possible if the function is broken
     const size_t arr2_capacity = 32769;
     DynamicArray8 arr2 = new_dynarr8_with_capacity(arr2_capacity);
 
@@ -349,8 +239,11 @@ static TEST_RESULT test_new_dynarr8() {
     assert(arr2.arr != 0, "Null array pointer");
 
     // Check no segmentation fault
-    for (byteval8 i = 0; i < arr2_capacity; ++i)
-        dynarr8_push(&arr2, i);
+    for (u64 i = 0; i < arr2_capacity; ++i)
+    {
+        byteval8 val = { .u64_val = i };
+        dynarr8_push(&arr2, val);
+    }
 
     assert(arr2.capacity == arr2_capacity, "Incorrect array capacity");
     assert(arr2.size == arr2_capacity, "Incorrect array size");
@@ -374,13 +267,16 @@ static TEST_RESULT test_free_dynarr8() {
 static TEST_RESULT test_dynarr8_push() {
     DynamicArray8 arr = new_dynarr8();
 
-    dynarr8_push(&arr, 42);
-    dynarr8_push(&arr, 67);
-    dynarr8_push(&arr, 1);
+    byteval8 val1 = { .u64_val = 42 };
+    byteval8 val2 = { .u64_val = 67 };
+    byteval8 val3 = { .double_val = 1.2 };
+    dynarr8_push(&arr, val1);
+    dynarr8_push(&arr, val2);
+    dynarr8_push(&arr, val3);
 
-    assert(arr.arr[0] == 42, "Incorrect value in array");
-    assert(arr.arr[1] == 67, "Incorrect value in array");
-    assert(arr.arr[2] == 1, "Incorrect value in array");
+    assert(arr.arr[0] == val1.u64_val, "Incorrect value in array");
+    assert(arr.arr[1] == val2.u64_val, "Incorrect value in array");
+    assert(arr.arr[2] == val3.double_val, "Incorrect value in array");
 
     free_dynarr8(&arr);
 
@@ -912,296 +808,6 @@ static TEST_RESULT test_dynarr16_remove_multiple_at() {
     return TEST_PASS;
 }
 
-static TEST_RESULT test_new_dynarr_table_entry() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    assert(arr.capacity == 1, "Incorrect array capacity");
-    assert(arr.size == 0, "Incorrect array size");
-    assert(arr.arr != 0, "Null array pointer");
-
-    // This size will exceed page size on practically all systems, so segmentation
-    // faults for stepping out of bounds are possible
-    const size_t arr2_capacity = 32769;
-    DynamicArray_TableEntry arr2 = new_dynarr_table_entry_with_capacity(arr2_capacity);
-
-    assert(arr2.capacity == arr2_capacity, "Incorrect array capacity");
-    assert(arr2.size == 0, "Incorrect array size");
-    assert(arr2.arr != 0, "Null array pointer");
-
-    // Check no segmentation fault
-    for (size_t i = 0.0; i < arr2_capacity; ++i)
-        dynarr_table_entry_push(&arr2, i + 0.25);
-
-    assert(arr2.capacity == arr2_capacity, "Incorrect array capacity");
-    assert(arr2.size == arr2_capacity, "Incorrect array size");
-
-    free_dynarr_table_entry(&arr);
-    free_dynarr_table_entry(&arr2);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_free_dynarr_table_entry() {
-    const size_t arr_capacity = 32769;
-    DynamicArray_TableEntry arr = new_dynarr_table_entry_with_capacity(arr_capacity);
-
-    // Just make sure this causes no errors
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_push() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 42.1);
-    dynarr_table_entry_push(&arr, 67.1);
-    dynarr_table_entry_push(&arr, 1.1);
-
-    assert(arr.arr[0] == 42.1, "Incorrect value in array");
-    assert(arr.arr[1] == 67.1, "Incorrect value in array");
-    assert(arr.arr[2] == 1.1, "Incorrect value in array");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_push_at() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 41.1);
-    dynarr_table_entry_push(&arr, 66.1);
-    dynarr_table_entry_push(&arr, 2.1);
-
-    dynarr_table_entry_push_at(&arr, 3.1, 1);
-
-    assert(arr.arr[0] == 41.1, "Incorrect value in array");
-    assert(arr.arr[1] == 3.1, "Incorrect value in array");
-    assert(arr.arr[2] == 66.1, "Incorrect value in array");
-    assert(arr.arr[3] == 2.1, "Incorrect value in array");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_get() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 43.1);
-    dynarr_table_entry_push(&arr, 68.1);
-    dynarr_table_entry_push(&arr, 4.1);
-
-    assert(dynarr_table_entry_get(&arr, 0) == 43.1, "Incorrect value in array");
-    assert(dynarr_table_entry_get(&arr, 1) == 68.1, "Incorrect value in array");
-    assert(dynarr_table_entry_get(&arr, 2) == 4.1, "Incorrect value in array");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_get_ptr() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 44.1);
-    dynarr_table_entry_push(&arr, 69.1);
-    dynarr_table_entry_push(&arr, 5.2);
-
-    assert(*(dynarr_table_entry_get_ptr(&arr, 0)) == 44.1, "Incorrect pointer to value in array");
-    assert(*(dynarr_table_entry_get_ptr(&arr, 1)) == 69.1, "Incorrect pointer to value in array");
-    assert(*(dynarr_table_entry_get_ptr(&arr, 2)) == 5.2, "Incorrect pointer to value in array");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_pop() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 100.1);
-    dynarr_table_entry_push(&arr, 101.1);
-    dynarr_table_entry_push(&arr, 102.1);
-
-    assert(arr.size == 3, "Incorrect array size");
-
-    assert(dynarr_table_entry_pop(&arr) == 102.1, "Incorrect value in array");
-    assert(arr.size == 2, "Incorrect array size");
-
-    assert(dynarr_table_entry_pop(&arr) == 101.1, "Incorrect value in array");
-    assert(arr.size == 1, "Incorrect array size");
-    
-    assert(dynarr_table_entry_pop(&arr) == 100.1, "Incorrect value in array");
-    assert(arr.size == 0, "Incorrect array size");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_shrink() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry_with_capacity(25);
-
-    assert(arr.size == 0, "Incorrect array size");
-    assert(arr.capacity == 25, "Incorrect array capacity");
-
-    dynarr_table_entry_push(&arr, 100.1);
-    dynarr_table_entry_push(&arr, 101.1);
-    dynarr_table_entry_push(&arr, 102.1);
-
-    assert(arr.size == 3, "Incorrect array size");
-    assert(arr.capacity == 25, "Incorrect array capacity");
-
-    dynarr_table_entry_shrink(&arr);
-
-    assert(arr.size == 3, "Incorrect array size");
-    assert(arr.capacity == 3, "Incorrect array capacity");
-
-    dynarr_table_entry_pop(&arr);
-
-    assert(arr.size == 2, "Incorrect array size");
-    assert(arr.capacity == 3, "Incorrect array capacity");
-
-    dynarr_table_entry_shrink(&arr);
-
-    assert(arr.size == 2, "Incorrect array size");
-    assert(arr.capacity == 2, "Incorrect array capacity");
-
-    free_dynarr_table_entry(&arr);
-    
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_expand() {
-    const size_t arr_capacity = 1000;
-    DynamicArray_TableEntry arr = new_dynarr_table_entry_with_capacity(arr_capacity);
-
-    assert(arr.capacity == arr_capacity, "Incorrect array capacity");
-    assert(arr.size == 0, "Incorrect array size");
-
-    const size_t arr_new_capacity = 32769;
-    dynarr_table_entry_expand(&arr, arr_new_capacity);
-
-    assert(arr.capacity == arr_new_capacity, "Incorrect array capacity");
-    assert(arr.size == 0, "Incorrect array size");
-
-    // Check no segmentation fault
-    for (size_t i = 0; i < arr_new_capacity; ++i)
-        dynarr_table_entry_push(&arr, i + 0.25);
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_grow_and_zero() {
-    const size_t arr_capacity = 2000;
-    DynamicArray_TableEntry arr = new_dynarr_table_entry_with_capacity(arr_capacity);
-    memset(arr.arr, 1, arr_capacity * sizeof(Tuple_u64_double));
-
-    dynarr_table_entry_shrink(&arr);
-
-    const size_t arr_new_capacity = 32769;
-    dynarr_table_entry_grow_and_zero(&arr, arr_new_capacity);
-    
-    assert(arr.capacity == arr_new_capacity, "Incorrect array capacity");
-    assert(arr.size == arr_new_capacity, "Incorrect array size");
-
-    assert(arr.arr[arr_capacity - 5] == 0, "Array was not correctly zeroed");
-
-    // Check no segmentation fault
-    for (size_t i = 0; i < arr_new_capacity; ++i)
-        dynarr_table_entry_push(&arr, i + 0.25);
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_push_multiple() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 41.1);
-    dynarr_table_entry_push(&arr, 66.1);
-
-    assert(arr.size == 2, "Incorrect array size");
-
-    double second_array[] = {98.1, 95.1, 93.1, 90.1};
-    dynarr_table_entry_push_multiple(&arr, second_array, 4);
-
-    assert(arr.size == 6, "Incorrect array size");
-
-    assert(dynarr_table_entry_get(&arr, 0) == 41.1, "Incorrect value in array");
-    assert(dynarr_table_entry_get(&arr, 1) == 66.1, "Incorrect value in array");
-    assert(dynarr_table_entry_get(&arr, 2) == second_array[0], "Incorrect value in array");
-    assert(dynarr_table_entry_get(&arr, 3) == second_array[1], "Incorrect value in array");
-    assert(dynarr_table_entry_get(&arr, 4) == second_array[2], "Incorrect value in array");
-    assert(dynarr_table_entry_get(&arr, 5) == second_array[3], "Incorrect value in array");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_remove_at() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 41.1);
-    dynarr_table_entry_push(&arr, 66.1);
-    dynarr_table_entry_push(&arr, 2.1);
-    dynarr_table_entry_push(&arr, 3.1);
-    dynarr_table_entry_push(&arr, 4.1);
-
-    assert(arr.size == 5, "Incorrect array size");
-
-    dynarr_table_entry_remove_at(&arr, 1); // Remove 66
-    dynarr_table_entry_remove_at(&arr, 2); // Remove 4 (its now at index 2 because 66 was removed)
-
-    assert(arr.size == 3, "Incorrect array size");
-
-    assert(arr.arr[0] == 41.1, "Incorrect value in array");
-    assert(arr.arr[1] == 2.1, "Incorrect value in array");
-    assert(arr.arr[2] == 4.1, "Incorrect value in array");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
-static TEST_RESULT test_dynarr_table_entry_remove_multiple_at() {
-    DynamicArray_TableEntry arr = new_dynarr_table_entry();
-
-    dynarr_table_entry_push(&arr, 0.1);
-    dynarr_table_entry_push(&arr, 1.1);
-    dynarr_table_entry_push(&arr, 2.1);
-    dynarr_table_entry_push(&arr, 3.1);
-    dynarr_table_entry_push(&arr, 4.1);
-    dynarr_table_entry_push(&arr, 5.1);
-    dynarr_table_entry_push(&arr, 6.1);
-    dynarr_table_entry_push(&arr, 7.1);
-    dynarr_table_entry_push(&arr, 8.1);
-    dynarr_table_entry_push(&arr, 9.1);
-
-    assert(arr.size == 10, "Incorrect array size");
-
-    dynarr_table_entry_remove_multiple_at(&arr, 3, 4);
-
-    assert(arr.size == 6, "Incorrect array size");
-
-    assert(arr.arr[0] == 0.1, "Incorrect value in array");
-    assert(arr.arr[1] == 1.1, "Incorrect value in array");
-    assert(arr.arr[2] == 2.1, "Incorrect value in array");
-    assert(arr.arr[3] == 7.1, "Incorrect value in array");
-    assert(arr.arr[4] == 8.1, "Incorrect value in array");
-    assert(arr.arr[5] == 9.1, "Incorrect value in array");
-
-    free_dynarr_table_entry(&arr);
-
-    return TEST_PASS;
-}
-
 ModuleTestSet dynarray_h_register_tests()
 {
     ModuleTestSet set = {
@@ -1235,19 +841,6 @@ ModuleTestSet dynarray_h_register_tests()
     register_test(&set, test_dynarr16_grow_and_zero);
     register_test(&set, test_dynarr16_push_multiple);
     register_test(&set, test_dynarr16_remove_at);
-
-    register_test(&set, test_new_dynarr_table_entry);
-    register_test(&set, test_free_dynarr_table_entry);
-    register_test(&set, test_dynarr_table_entry_push);
-    register_test(&set, test_dynarr_table_entry_push_at);
-    register_test(&set, test_dynarr_table_entry_get);
-    register_test(&set, test_dynarr_table_entry_get_ptr);
-    register_test(&set, test_dynarr_table_entry_pop);
-    register_test(&set, test_dynarr_table_entry_shrink);
-    register_test(&set, test_dynarr_table_entry_expand);
-    register_test(&set, test_dynarr_table_entry_grow_and_zero);
-    register_test(&set, test_dynarr_table_entry_push_multiple);
-    register_test(&set, test_dynarr_table_entry_remove_at);
 
     return set;
 }
