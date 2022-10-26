@@ -115,8 +115,8 @@ _gphrx_lib.gphrx_add_edge.restype = None
 _gphrx_lib.gphrx_remove_edge.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64, ctypes.c_uint64)
 _gphrx_lib.gphrx_remove_edge.restype = ctypes.c_uint8
 
-_gphrx_lib.gphrx_find_occurrence_matrix.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64)
-_gphrx_lib.gphrx_find_occurrence_matrix.restype = _GphrxCsrMatrix_c
+_gphrx_lib.gphrx_find_occurrence_proportion_matrix.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64)
+_gphrx_lib.gphrx_find_occurrence_proportion_matrix.restype = _GphrxCsrMatrix_c
 
 _gphrx_lib.approximate_gphrx.argtypes = (ctypes.POINTER(_GphrxGraph_c), ctypes.c_uint64, ctypes.c_double)
 _gphrx_lib.approximate_gphrx.restype = _GphrxGraph_c
@@ -131,7 +131,7 @@ _gphrx_lib.free_gphrx_byte_array.argtypes = [ctypes.c_void_p]
 _gphrx_lib.free_gphrx_byte_array.restype = None
 
 
-class GphrxOccurrenceMatrix:
+class GphrxOccurrenceProportionMatrix:
     def __init__(self, c_csr_matrix):
         self._matrix = c_csr_matrix
 
@@ -179,6 +179,13 @@ class GphrxGraph:
         #       adjacency matrix will already be freed when __del__ is called on self.adjacency_matrix
         # _gphrx_lib.free_gphrx(self._graph)
         pass
+
+    def node_count(self):
+        return self.adjacency_matrix.dimension()
+
+    def edge_count(self):
+        edges = self._graph.adjacency_matrix.col_indices.size 
+        return int(edges / 2) if self.is_undirected else edges
 
     @staticmethod
     def from_bytes(byte_array):
@@ -230,9 +237,9 @@ class GphrxGraph:
             raise ValueError("Edge from vertex " + str(from_vertex_id) +
                              " to vertex " + str(to_vertex_id) + " does not exist")
 
-    def find_occurrence_matrix(self, block_dimension):
-        c_matrix = _gphrx_lib.gphrx_find_occurrence_matrix(self._graph, block_dimension)
-        return GphrxOccurrenceMatrix(c_matrix)
+    def find_occurrence_proportion_matrix(self, block_dimension):
+        c_matrix = _gphrx_lib.gphrx_find_occurrence_proportion_matrix(self._graph, block_dimension)
+        return GphrxOccurrenceProportionMatrix(c_matrix)
         
     def approximate(self, block_dimension, threshold):
         c_graph = _gphrx_lib.approximate_gphrx(self._graph, block_dimension, threshold)
