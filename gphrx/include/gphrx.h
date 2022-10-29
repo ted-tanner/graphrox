@@ -57,7 +57,7 @@ typedef struct {
  */
 typedef struct {
     u64 dimension;
-    DynamicArrayDouble entries;
+    DynamicArray8 entries;
     DynamicArray8 col_indices;
     DynamicArray8 row_indices; 
 } GphrxCsrMatrix;

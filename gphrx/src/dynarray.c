@@ -189,9 +189,9 @@ static TEST_RESULT test_dynarr8_push_at() {
     dynarr8_push_at(&arr, val4, 1);
 
     assert(arr.arr[0].u64_val == val1.u64_val, "Incorrect value in array");
-    assert(arr.arr[1].u64_val == val2.u64_val, "Incorrect value in array");
-    assert(arr.arr[2].u64_val == val3.u64_val, "Incorrect value in array");
-    assert(arr.arr[3].dbl_val == val4.dbl_val, "Incorrect value in array");
+    assert(arr.arr[1].u64_val == val4.u64_val, "Incorrect value in array");
+    assert(arr.arr[2].u64_val == val2.u64_val, "Incorrect value in array");
+    assert(arr.arr[3].dbl_val == val3.dbl_val, "Incorrect value in array");
 
     free_dynarr8(&arr);
 
@@ -229,9 +229,9 @@ static TEST_RESULT test_dynarr8_get_ptr() {
     dynarr8_push(&arr, val2);
     dynarr8_push(&arr, val3);
 
-    assert(*(dynarr8_get_ptr(&arr, 0)) == val1.u64_val, "Incorrect pointer to value in array");
-    assert(*(dynarr8_get_ptr(&arr, 1)) == val2.u64_val, "Incorrect pointer to value in array");
-    assert(*(dynarr8_get_ptr(&arr, 2)) == val3.u64_val, "Incorrect pointer to value in array");
+    assert((*(dynarr8_get_ptr(&arr, 0))).u64_val == val1.u64_val, "Incorrect pointer to value in array");
+    assert((*(dynarr8_get_ptr(&arr, 1))).u64_val == val2.u64_val, "Incorrect pointer to value in array");
+    assert((*(dynarr8_get_ptr(&arr, 2))).u64_val == val3.u64_val, "Incorrect pointer to value in array");
 
     free_dynarr8(&arr);
 
@@ -251,13 +251,13 @@ static TEST_RESULT test_dynarr8_pop() {
 
     assert(arr.size == 3, "Incorrect array size");
 
-    assert(dynarr8_pop(&arr) == val3, "Incorrect value in array");
+    assert(dynarr8_pop(&arr).u64_val == val3.u64_val, "Incorrect value in array");
     assert(arr.size == 2, "Incorrect array size");
 
-    assert(dynarr8_pop(&arr) == val2, "Incorrect value in array");
+    assert(dynarr8_pop(&arr).u64_val == val2.u64_val, "Incorrect value in array");
     assert(arr.size == 1, "Incorrect array size");
     
-    assert(dynarr8_pop(&arr) == val1, "Incorrect value in array");
+    assert(dynarr8_pop(&arr).u64_val == val1.u64_val, "Incorrect value in array");
     assert(arr.size == 0, "Incorrect array size");
 
     free_dynarr8(&arr);
@@ -340,7 +340,7 @@ static TEST_RESULT test_dynarr8_grow_and_zero() {
     assert(arr.capacity == arr_new_capacity, "Incorrect array capacity");
     assert(arr.size == arr_new_capacity, "Incorrect array size");
 
-    assert(arr.arr[arr_capacity - 5] == 0, "Array was not correctly zeroed");
+    assert(arr.arr[arr_capacity - 5].u64_val == 0, "Array was not correctly zeroed");
 
     // Check no segmentation fault
     for (u64 i = 0; i < arr_new_capacity; ++i)

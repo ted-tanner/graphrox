@@ -245,7 +245,7 @@ static size_t binary_search_first(u64 vertex_id, u64 *arr, size_t start, size_t 
 static size_t index_of_vertex(DynamicArray8 *col_arr, DynamicArray8 *row_arr,
                               u64 from_vertex_id, u64 to_vertex_id)
 {
-    size_t curr_idx = binary_search_first(from_vertex_id, col_arr->arr, 0, col_arr->size);
+    size_t curr_idx = binary_search_first(from_vertex_id, (u64*) col_arr->arr, 0, col_arr->size);
     for (; curr_idx < col_arr->size &&
              dynarr8_get(col_arr, curr_idx).u64_val == from_vertex_id &&
              dynarr8_get(row_arr, curr_idx).u64_val < to_vertex_id; ++curr_idx);
@@ -287,7 +287,7 @@ DLLEXPORT void gphrx_add_vertex(GphrxGraph *restrict graph, u64 vertex_id, u64 *
 DLLEXPORT void gphrx_remove_vertex(GphrxGraph *restrict graph, u64 vertex_id)
 {
     size_t vertex_idx = binary_search_first(vertex_id,
-                                            graph->adjacency_matrix.col_indices.arr,
+                                            (u64*) graph->adjacency_matrix.col_indices.arr,
                                             0,
                                             graph->adjacency_matrix.col_indices.size);
     
@@ -343,8 +343,8 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u6
         return;
     }
 
-    Byte8Val from_vertex_id_bv = Byte8Val { .u64_val = from_vertex_id };
-    Byte8Val to_vertex_id_bv = Byte8Val { .u64_val = to_vertex_id };
+    Byte8Val from_vertex_id_bv = { .u64_val = from_vertex_id };
+    Byte8Val to_vertex_id_bv = { .u64_val = to_vertex_id };
 
     dynarr8_push_at(&graph->adjacency_matrix.col_indices, from_vertex_id_bv, vertex_idx);
     dynarr8_push_at(&graph->adjacency_matrix.row_indices, to_vertex_id_bv, vertex_idx);
@@ -489,7 +489,7 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dim
 
     for (size_t i = 0; i < occurrence_matrix.entries.size; ++i)
     {
-        if (dynarr8_get(&occurrence_matrix.entries, i).u64_val >= threshold)
+        if (dynarr8_get(&occurrence_matrix.entries, i).dbl_val >= threshold)
         {
             Byte8Val col_bv = { .u64_val = dynarr8_get(&occurrence_matrix.col_indices, i).u64_val };
             Byte8Val row_bv = { .u64_val = dynarr8_get(&occurrence_matrix.row_indices, i).u64_val };
@@ -565,13 +565,13 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *restrict graph)
         
         for (size_t i = 0; i < graph->adjacency_matrix.col_indices.size; ++i, pos += sizeof(u64))
         {
-            temp8 = u64_reverse_bits(graph->adjacency_matrix.col_indices.arr[i]);
+            temp8 = u64_reverse_bits(graph->adjacency_matrix.col_indices.arr[i].u64_val);
             memcpy(buffer + pos, &temp8, sizeof(u64));
         }
 
         for (size_t i = 0; i < graph->adjacency_matrix.row_indices.size; ++i, pos += sizeof(u64))
         {
-            temp8 = u64_reverse_bits(graph->adjacency_matrix.row_indices.arr[i]);
+            temp8 = u64_reverse_bits(graph->adjacency_matrix.row_indices.arr[i].u64_val);
             memcpy(buffer + pos, &temp8, sizeof(u64));
         }
     }
@@ -649,14 +649,14 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *restrict arr, GphrxErrorCode *r
     {
         for (size_t i = 0; i < header.csr_adjacency_matrix_size; ++i)
         {
-            graph.adjacency_matrix.col_indices.arr[i] =
-                u64_reverse_bits(graph.adjacency_matrix.col_indices.arr[i]);
+            graph.adjacency_matrix.col_indices.arr[i].u64_val =
+                u64_reverse_bits(graph.adjacency_matrix.col_indices.arr[i].u64_val);
         }
 
         for (size_t i = 0; i < header.csr_adjacency_matrix_size; ++i)
         {
-            graph.adjacency_matrix.row_indices.arr[i] =
-                u64_reverse_bits(graph.adjacency_matrix.row_indices.arr[i]);
+            graph.adjacency_matrix.row_indices.arr[i].u64_val =
+                u64_reverse_bits(graph.adjacency_matrix.row_indices.arr[i].u64_val);
         }
     }
     
@@ -725,23 +725,23 @@ static TEST_RESULT test_duplicate_gphrx()
 
     for (size_t i = 0; i < undirected_graph.adjacency_matrix.col_indices.size; ++i)
     {
-        assert(undirected_graph.adjacency_matrix.col_indices.arr[i]
-               == dup_undirected_graph.adjacency_matrix.col_indices.arr[i],
+        assert(undirected_graph.adjacency_matrix.col_indices.arr[i].u64_val
+               == dup_undirected_graph.adjacency_matrix.col_indices.arr[i].u64_val,
                "Graph was incorrectly duplicated");
         
-        assert(undirected_graph.adjacency_matrix.row_indices.arr[i]
-               == dup_undirected_graph.adjacency_matrix.row_indices.arr[i],
+        assert(undirected_graph.adjacency_matrix.row_indices.arr[i].u64_val
+               == dup_undirected_graph.adjacency_matrix.row_indices.arr[i].u64_val,
                "Graph was incorrectly duplicated");
     }
 
     for (size_t i = 0; i < directed_graph.adjacency_matrix.col_indices.size; ++i)
     {
-        assert(directed_graph.adjacency_matrix.col_indices.arr[i]
-               == dup_directed_graph.adjacency_matrix.col_indices.arr[i],
+        assert(directed_graph.adjacency_matrix.col_indices.arr[i].u64_val
+               == dup_directed_graph.adjacency_matrix.col_indices.arr[i].u64_val,
                "Graph was incorrectly duplicated");
         
-        assert(directed_graph.adjacency_matrix.row_indices.arr[i]
-               == dup_directed_graph.adjacency_matrix.row_indices.arr[i],
+        assert(directed_graph.adjacency_matrix.row_indices.arr[i].u64_val
+               == dup_directed_graph.adjacency_matrix.row_indices.arr[i].u64_val,
                "Graph was incorrectly duplicated");
     }
     
@@ -822,7 +822,7 @@ static TEST_RESULT test_gphrx_csr_matrix_to_string()
 
     free_gphrx_byte_array(occurrence_matrix_str);
 
-    occurrence_matrix.entries.arr[2] = 500023.977;
+    occurrence_matrix.entries.arr[2].dbl_val = 500023.977;
     char *matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 2);
 
     char *matrix_expected_str = "[      0.78,      0.22,      0.11 ]\r\n[      0.22,      0.22,      0.00 ]\r\n[ 500023.98,      0.00,      0.11 ]";
@@ -1446,7 +1446,7 @@ static TEST_RESULT test_approximate_gphrx()
     GphrxGraph approx_graph = approximate_gphrx(&undirected_graph, 2, 0.3);
 
     assert(approx_graph.adjacency_matrix.dimension == 5, "Incorrect graph approximation");
-    
+
     assert(approx_graph.adjacency_matrix.col_indices.size == 6, "Incorrect graph approximation");
     assert(approx_graph.adjacency_matrix.row_indices.size == 6, "Incorrect graph approximation");
     
@@ -1548,12 +1548,12 @@ static TEST_RESULT test_gphrx_to_from_byte_array()
 
     for (size_t i = 0; i < undirected_graph.adjacency_matrix.col_indices.size; ++i)
     {
-        assert(undirected_graph.adjacency_matrix.col_indices.arr[i] ==
-               undir_graph_from_arr.adjacency_matrix.col_indices.arr[i],
+        assert(undirected_graph.adjacency_matrix.col_indices.arr[i].u64_val ==
+               undir_graph_from_arr.adjacency_matrix.col_indices.arr[i].u64_val,
                "Incorrectly loaded graph adjacency matrix");
 
-        assert(undirected_graph.adjacency_matrix.row_indices.arr[i] ==
-               undir_graph_from_arr.adjacency_matrix.row_indices.arr[i],
+        assert(undirected_graph.adjacency_matrix.row_indices.arr[i].u64_val ==
+               undir_graph_from_arr.adjacency_matrix.row_indices.arr[i].u64_val,
                "Incorrectly loaded graph adjacency matrix");
     }
 
@@ -1588,12 +1588,12 @@ static TEST_RESULT test_gphrx_to_from_byte_array()
 
     for (size_t i = 0; i < directed_graph.adjacency_matrix.col_indices.size; ++i)
     {
-        assert(directed_graph.adjacency_matrix.col_indices.arr[i] ==
-               dir_graph_from_arr.adjacency_matrix.col_indices.arr[i],
+        assert(directed_graph.adjacency_matrix.col_indices.arr[i].u64_val ==
+               dir_graph_from_arr.adjacency_matrix.col_indices.arr[i].u64_val,
                "Incorrectly loaded graph adjacency matrix");
 
-        assert(directed_graph.adjacency_matrix.row_indices.arr[i] ==
-               dir_graph_from_arr.adjacency_matrix.row_indices.arr[i],
+        assert(directed_graph.adjacency_matrix.row_indices.arr[i].u64_val ==
+               dir_graph_from_arr.adjacency_matrix.row_indices.arr[i].u64_val,
                "Incorrectly loaded graph adjacency matrix");
     }
 
