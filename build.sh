@@ -12,4 +12,5 @@ mkdir -p $OUTPUT_DIR
 
 $COMPILER $WARNINGS -fvisibility=hidden $FLAGS -I$INCLUDE_DIR $FILES $BUILD_SPECIFIC_FILES -o $OUTPUT_LOC &&
 
+mkdir -p $LIB_DIR &&
 cp $OUTPUT_LOC $LIB_DIR
