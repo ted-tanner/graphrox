@@ -4,8 +4,8 @@ static GphrxGraph new_gphrx(bool is_undirected)
 {
     GphrxCsrAdjacencyMatrix adjacency_matrix = {
         .dimension = 0,
-        .col_indices = new_dynarr_u64(),
-        .row_indices = new_dynarr_u64(),
+        .col_indices = new_dynarr8(),
+        .row_indices = new_dynarr8(),
     };
     
     GphrxGraph graph = {
@@ -32,8 +32,8 @@ DLLEXPORT GphrxGraph duplicate_gphrx(GphrxGraph *restrict graph)
         
     GphrxCsrAdjacencyMatrix adjacency_matrix = {
         .dimension = graph->adjacency_matrix.dimension,
-        .col_indices = new_dynarr_u64_with_capacity(edge_count),
-        .row_indices = new_dynarr_u64_with_capacity(edge_count),
+        .col_indices = new_dynarr8_with_capacity(edge_count),
+        .row_indices = new_dynarr8_with_capacity(edge_count),
     };
 
     adjacency_matrix.col_indices.size = edge_count;
@@ -62,15 +62,15 @@ DLLEXPORT void free_gphrx(GphrxGraph *restrict graph)
 
 DLLEXPORT void free_gphrx_csr_matrix(GphrxCsrMatrix *restrict matrix)
 {
-    free_dynarr_dbl(&matrix->entries);
-    free_dynarr_u64(&matrix->col_indices);
-    free_dynarr_u64(&matrix->row_indices);
+    free_dynarr8(&matrix->entries);
+    free_dynarr8(&matrix->col_indices);
+    free_dynarr8(&matrix->row_indices);
 }
 
 DLLEXPORT void free_gphrx_csr_adj_matrix(GphrxCsrAdjacencyMatrix *restrict matrix)
 {
-    free_dynarr_u64(&matrix->col_indices);
-    free_dynarr_u64(&matrix->row_indices);
+    free_dynarr8(&matrix->col_indices);
+    free_dynarr8(&matrix->row_indices);
 }
 
 DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *restrict matrix, int decimal_digits)
@@ -78,7 +78,7 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *restrict matrix, int 
     double highest = 0.0;
     for (size_t i = 0; i < matrix->entries.size; ++i)
     {
-        double curr = dynarr_dbl_get(&matrix->entries, i);
+        double curr = dynarr8_get(&matrix->entries, i).dbl_val;
         if (curr > highest)
             highest = curr;
     }
@@ -132,9 +132,9 @@ DLLEXPORT char *gphrx_csr_matrix_to_string(GphrxCsrMatrix *restrict matrix, int 
 
     for (size_t i = 0; i < matrix->col_indices.size; ++i)
     {
-        u64 col = dynarr_u64_get(&matrix->col_indices, i);
-        u64 row = dynarr_u64_get(&matrix->row_indices, i);
-        double entry = dynarr_dbl_get(&matrix->entries, i);
+        u64 col = dynarr8_get(&matrix->col_indices, i).u64_val;
+        u64 row = dynarr8_get(&matrix->row_indices, i).u64_val;
+        double entry = dynarr8_get(&matrix->entries, i).dbl_val;
 
         pos = row * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
         
@@ -194,8 +194,8 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *restrict
 
     for (size_t i = 0; i < matrix->col_indices.size; ++i)
     {
-        u64 col = dynarr_u64_get(&matrix->col_indices, i);
-        u64 row = dynarr_u64_get(&matrix->row_indices, i);
+        u64 col = dynarr8_get(&matrix->col_indices, i).u64_val;
+        u64 row = dynarr8_get(&matrix->row_indices, i).u64_val;
 
         pos = row * chars_per_row + extra_chars_per_row_at_front + chars_per_entry * col;
 
@@ -207,8 +207,8 @@ DLLEXPORT char *gphrx_csr_adj_matrix_to_string(GphrxCsrAdjacencyMatrix *restrict
 
 DLLEXPORT void gphrx_shrink(GphrxGraph *restrict graph)
 {
-    dynarr_u64_shrink(&graph->adjacency_matrix.col_indices);
-    dynarr_u64_shrink(&graph->adjacency_matrix.row_indices);
+    dynarr8_shrink(&graph->adjacency_matrix.col_indices);
+    dynarr8_shrink(&graph->adjacency_matrix.row_indices);
 }
 
 static size_t binary_search_first(u64 vertex_id, u64 *arr, size_t start, size_t end)
@@ -242,13 +242,13 @@ static size_t binary_search_first(u64 vertex_id, u64 *arr, size_t start, size_t 
     return middle;
 }
 
-static size_t index_of_vertex(DynamicArrayU64 *col_arr, DynamicArrayU64 *row_arr,
+static size_t index_of_vertex(DynamicArray8 *col_arr, DynamicArray8 *row_arr,
                               u64 from_vertex_id, u64 to_vertex_id)
 {
     size_t curr_idx = binary_search_first(from_vertex_id, col_arr->arr, 0, col_arr->size);
     for (; curr_idx < col_arr->size &&
-             dynarr_u64_get(col_arr, curr_idx) == from_vertex_id &&
-             dynarr_u64_get(row_arr, curr_idx) < to_vertex_id; ++curr_idx);
+             dynarr8_get(col_arr, curr_idx).u64_val == from_vertex_id &&
+             dynarr8_get(row_arr, curr_idx).u64_val < to_vertex_id; ++curr_idx);
     return curr_idx;
 }
 
@@ -264,8 +264,8 @@ DLLEXPORT bool gphrx_does_edge_exist(GphrxGraph *restrict graph, u64 from_vertex
     if (vertex_idx >= graph->adjacency_matrix.col_indices.size)
         return false;
 
-    if (dynarr_u64_get(&graph->adjacency_matrix.col_indices, vertex_idx) == from_vertex_id
-        && dynarr_u64_get(&graph->adjacency_matrix.row_indices, vertex_idx) == to_vertex_id)
+    if (dynarr8_get(&graph->adjacency_matrix.col_indices, vertex_idx).u64_val == from_vertex_id
+        && dynarr8_get(&graph->adjacency_matrix.row_indices, vertex_idx).u64_val == to_vertex_id)
     {
         return true;
     }
@@ -295,30 +295,30 @@ DLLEXPORT void gphrx_remove_vertex(GphrxGraph *restrict graph, u64 vertex_id)
     size_t last_edge_idx = vertex_idx;
 
     while (first_edge_idx >= 1 &&
-           dynarr_u64_get(&graph->adjacency_matrix.col_indices, first_edge_idx - 1) == vertex_id)
+           dynarr8_get(&graph->adjacency_matrix.col_indices, first_edge_idx - 1).u64_val == vertex_id)
         --first_edge_idx;
 
     while (last_edge_idx < graph->adjacency_matrix.col_indices.size - 1 &&
-           dynarr_u64_get(&graph->adjacency_matrix.col_indices, last_edge_idx + 1) == vertex_id)
+           dynarr8_get(&graph->adjacency_matrix.col_indices, last_edge_idx + 1).u64_val == vertex_id)
         ++last_edge_idx;
 
     if (first_edge_idx != graph->adjacency_matrix.col_indices.size)
     {
-        dynarr_u64_remove_multiple_at(&graph->adjacency_matrix.col_indices,
+        dynarr8_remove_multiple_at(&graph->adjacency_matrix.col_indices,
                                       first_edge_idx,
                                       last_edge_idx + 1 - first_edge_idx);
 
-        dynarr_u64_remove_multiple_at(&graph->adjacency_matrix.row_indices,
+        dynarr8_remove_multiple_at(&graph->adjacency_matrix.row_indices,
                                       first_edge_idx,
                                       last_edge_idx + 1 - first_edge_idx);
     }
 
     for (size_t i = 0; i < graph->adjacency_matrix.row_indices.size; ++i)
     {
-        if (dynarr_u64_get(&graph->adjacency_matrix.row_indices, i) == vertex_id)
+        if (dynarr8_get(&graph->adjacency_matrix.row_indices, i).u64_val == vertex_id)
         {
-            dynarr_u64_remove_at(&graph->adjacency_matrix.col_indices, i);
-            dynarr_u64_remove_at(&graph->adjacency_matrix.row_indices, i);
+            dynarr8_remove_at(&graph->adjacency_matrix.col_indices, i);
+            dynarr8_remove_at(&graph->adjacency_matrix.row_indices, i);
             --i; // The rest of the array has been shifted over, so must revisit same i to avoid skipping 
         }
     }
@@ -336,15 +336,18 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u6
                           from_vertex_id, to_vertex_id);
 
     if (vertex_idx < graph->adjacency_matrix.col_indices.size &&
-        dynarr_u64_get(&graph->adjacency_matrix.col_indices, vertex_idx) == from_vertex_id &&
-        dynarr_u64_get(&graph->adjacency_matrix.row_indices, vertex_idx) == to_vertex_id)
+        dynarr8_get(&graph->adjacency_matrix.col_indices, vertex_idx).u64_val == from_vertex_id &&
+        dynarr8_get(&graph->adjacency_matrix.row_indices, vertex_idx).u64_val == to_vertex_id)
     {
         // The edge already exists
         return;
     }
 
-    dynarr_u64_push_at(&graph->adjacency_matrix.col_indices, from_vertex_id, vertex_idx);
-    dynarr_u64_push_at(&graph->adjacency_matrix.row_indices, to_vertex_id, vertex_idx);
+    Byte8Val from_vertex_id_bv = Byte8Val { .u64_val = from_vertex_id };
+    Byte8Val to_vertex_id_bv = Byte8Val { .u64_val = to_vertex_id };
+
+    dynarr8_push_at(&graph->adjacency_matrix.col_indices, from_vertex_id_bv, vertex_idx);
+    dynarr8_push_at(&graph->adjacency_matrix.row_indices, to_vertex_id_bv, vertex_idx);
     
     if (graph->is_undirected && from_vertex_id != to_vertex_id)
     {
@@ -352,8 +355,8 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u6
                                             &graph->adjacency_matrix.row_indices,
                                             to_vertex_id, from_vertex_id);
 
-        dynarr_u64_push_at(&graph->adjacency_matrix.col_indices, to_vertex_id, vertex_idx);
-        dynarr_u64_push_at(&graph->adjacency_matrix.row_indices, from_vertex_id, vertex_idx);
+        dynarr8_push_at(&graph->adjacency_matrix.col_indices, to_vertex_id_bv, vertex_idx);
+        dynarr8_push_at(&graph->adjacency_matrix.row_indices, from_vertex_id_bv, vertex_idx);
     }
 
     if (from_vertex_id + 1 > graph->adjacency_matrix.dimension)
@@ -369,12 +372,12 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_
                                         &graph->adjacency_matrix.row_indices,
                                         from_vertex_id, to_vertex_id);
 
-    if (dynarr_u64_get(&graph->adjacency_matrix.col_indices, vertex_idx) != from_vertex_id ||
-        dynarr_u64_get(&graph->adjacency_matrix.row_indices, vertex_idx) != to_vertex_id)
+    if (dynarr8_get(&graph->adjacency_matrix.col_indices, vertex_idx).u64_val != from_vertex_id ||
+        dynarr8_get(&graph->adjacency_matrix.row_indices, vertex_idx).u64_val != to_vertex_id)
         return GPHRX_ERROR_NOT_FOUND;
     
-    dynarr_u64_remove_at(&graph->adjacency_matrix.col_indices, vertex_idx);
-    dynarr_u64_remove_at(&graph->adjacency_matrix.row_indices, vertex_idx);
+    dynarr8_remove_at(&graph->adjacency_matrix.col_indices, vertex_idx);
+    dynarr8_remove_at(&graph->adjacency_matrix.row_indices, vertex_idx);
 
     if (graph->is_undirected)
     {
@@ -382,8 +385,8 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_
                                             &graph->adjacency_matrix.row_indices,
                                             to_vertex_id, from_vertex_id);
         
-        dynarr_u64_remove_at(&graph->adjacency_matrix.col_indices, vertex_idx);
-        dynarr_u64_remove_at(&graph->adjacency_matrix.row_indices, vertex_idx);
+        dynarr8_remove_at(&graph->adjacency_matrix.col_indices, vertex_idx);
+        dynarr8_remove_at(&graph->adjacency_matrix.row_indices, vertex_idx);
     }
 
     return GPHRX_NO_ERROR;
@@ -408,8 +411,8 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *res
 
     for (size_t i = 0; i < graph->adjacency_matrix.col_indices.size; ++i)
     {
-        u64 col = dynarr_u64_get(&graph->adjacency_matrix.col_indices, i);
-        u64 row = dynarr_u64_get(&graph->adjacency_matrix.row_indices, i);
+        u64 col = dynarr8_get(&graph->adjacency_matrix.col_indices, i).u64_val;
+        u64 row = dynarr8_get(&graph->adjacency_matrix.row_indices, i).u64_val;
 
         u64 col_pos = col / block_dimension;
         u64 row_pos = row / block_dimension;
@@ -420,9 +423,9 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *res
 
     GphrxCsrMatrix occurrence_matrix = {
         .dimension = blocks_per_row,
-        .entries = new_dynarr_dbl_with_capacity(block_count),
-        .col_indices = new_dynarr_u64_with_capacity(block_count),
-        .row_indices = new_dynarr_u64_with_capacity(block_count),
+        .entries = new_dynarr8_with_capacity(block_count),
+        .col_indices = new_dynarr8_with_capacity(block_count),
+        .row_indices = new_dynarr8_with_capacity(block_count),
     };
     
     double block_size = block_dimension * block_dimension;
@@ -435,9 +438,13 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *res
 
             if (entry != 0.0)
             {
-                dynarr_dbl_push(&occurrence_matrix.entries, entry);
-                dynarr_u64_push(&occurrence_matrix.col_indices, col);
-                dynarr_u64_push(&occurrence_matrix.row_indices, row);
+                Byte8Val entry_bv = { .dbl_val = entry };
+                Byte8Val col_bv = { .u64_val = col };
+                Byte8Val row_bv = { .u64_val = row };
+
+                dynarr8_push(&occurrence_matrix.entries, entry_bv);
+                dynarr8_push(&occurrence_matrix.col_indices, col_bv);
+                dynarr8_push(&occurrence_matrix.row_indices, row_bv);
             }
         }
     }
@@ -471,8 +478,8 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dim
 
     GphrxCsrAdjacencyMatrix approx_adj_matrix = {
         .dimension = occurrence_matrix.dimension,
-        .col_indices = new_dynarr_u64_with_capacity(block_count),
-        .row_indices = new_dynarr_u64_with_capacity(block_count),
+        .col_indices = new_dynarr8_with_capacity(block_count),
+        .row_indices = new_dynarr8_with_capacity(block_count),
     };
 
     GphrxGraph approx_graph = {
@@ -482,12 +489,13 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dim
 
     for (size_t i = 0; i < occurrence_matrix.entries.size; ++i)
     {
-        if (dynarr_dbl_get(&occurrence_matrix.entries, i) >= threshold)
+        if (dynarr8_get(&occurrence_matrix.entries, i).u64_val >= threshold)
         {
-            dynarr_u64_push(&approx_graph.adjacency_matrix.col_indices,
-                            dynarr_dbl_get(&occurrence_matrix.col_indices, i));
-            dynarr_u64_push(&approx_graph.adjacency_matrix.row_indices,
-                            dynarr_dbl_get(&occurrence_matrix.row_indices, i));
+            Byte8Val col_bv = { .u64_val = dynarr8_get(&occurrence_matrix.col_indices, i).u64_val };
+            Byte8Val row_bv = { .u64_val = dynarr8_get(&occurrence_matrix.row_indices, i).u64_val };
+            
+            dynarr8_push(&approx_graph.adjacency_matrix.col_indices, col_bv);
+            dynarr8_push(&approx_graph.adjacency_matrix.row_indices, row_bv);
         }
     }
 
@@ -540,12 +548,12 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *restrict graph)
         memcpy(buffer + pos, &temp_u32, sizeof(u32));
         pos += sizeof(u32);
 
-        u64 temp_u64 = u64_reverse_bits((u64) graph->adjacency_matrix.dimension);
-        memcpy(buffer + pos, &temp_u64, sizeof(u64));
+        u64 temp8 = u64_reverse_bits((u64) graph->adjacency_matrix.dimension);
+        memcpy(buffer + pos, &temp8, sizeof(u64));
         pos += sizeof(u64);
         
-        temp_u64 = u64_reverse_bits((u64) graph->adjacency_matrix.col_indices.size);
-        memcpy(buffer + pos, &temp_u64, sizeof(u64));
+        temp8 = u64_reverse_bits((u64) graph->adjacency_matrix.col_indices.size);
+        memcpy(buffer + pos, &temp8, sizeof(u64));
         pos += sizeof(u64);
 
         memcpy(buffer + pos, &graph->is_undirected, sizeof(u8));
@@ -557,14 +565,14 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *restrict graph)
         
         for (size_t i = 0; i < graph->adjacency_matrix.col_indices.size; ++i, pos += sizeof(u64))
         {
-            temp_u64 = u64_reverse_bits(graph->adjacency_matrix.col_indices.arr[i]);
-            memcpy(buffer + pos, &temp_u64, sizeof(u64));
+            temp8 = u64_reverse_bits(graph->adjacency_matrix.col_indices.arr[i]);
+            memcpy(buffer + pos, &temp8, sizeof(u64));
         }
 
         for (size_t i = 0; i < graph->adjacency_matrix.row_indices.size; ++i, pos += sizeof(u64))
         {
-            temp_u64 = u64_reverse_bits(graph->adjacency_matrix.row_indices.arr[i]);
-            memcpy(buffer + pos, &temp_u64, sizeof(u64));
+            temp8 = u64_reverse_bits(graph->adjacency_matrix.row_indices.arr[i]);
+            memcpy(buffer + pos, &temp8, sizeof(u64));
         }
     }
 
@@ -617,8 +625,8 @@ DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *restrict arr, GphrxErrorCode *r
     }
 
     GphrxCsrAdjacencyMatrix adjacency_matrix = {
-        .col_indices = new_dynarr_u64_with_capacity(header.csr_adjacency_matrix_size),
-        .row_indices = new_dynarr_u64_with_capacity(header.csr_adjacency_matrix_size),
+        .col_indices = new_dynarr8_with_capacity(header.csr_adjacency_matrix_size),
+        .row_indices = new_dynarr8_with_capacity(header.csr_adjacency_matrix_size),
     };
     
     graph.is_undirected = header.is_undirected;
@@ -767,9 +775,9 @@ static TEST_RESULT test_free_gphrx_csr_matrix()
 {
     GphrxCsrMatrix matrix = {
         .dimension = 5,
-        .entries = new_dynarr_dbl_with_capacity(100),
-        .col_indices = new_dynarr_u64_with_capacity(150),
-        .row_indices = new_dynarr_u64_with_capacity(125),
+        .entries = new_dynarr8_with_capacity(100),
+        .col_indices = new_dynarr8_with_capacity(150),
+        .row_indices = new_dynarr8_with_capacity(125),
     };
 
     // Verify no segmentation fault
@@ -782,8 +790,8 @@ static TEST_RESULT test_free_gphrx_csr_adj_matrix()
 {
     GphrxCsrAdjacencyMatrix matrix = {
         .dimension = 5,
-        .col_indices = new_dynarr_u64_with_capacity(100),
-        .row_indices = new_dynarr_u64_with_capacity(10),
+        .col_indices = new_dynarr8_with_capacity(100),
+        .row_indices = new_dynarr8_with_capacity(10),
     };
 
     // Verify no segmentation fault
@@ -855,13 +863,13 @@ static TEST_RESULT test_gphrx_shrink()
     GphrxGraph undirected_graph = new_undirected_gphrx();
     GphrxGraph directed_graph = new_directed_gphrx();
 
-    dynarr_u64_expand(&undirected_graph.adjacency_matrix.col_indices, 500);
-    dynarr_u64_expand(&undirected_graph.adjacency_matrix.row_indices, 300);
+    dynarr8_expand(&undirected_graph.adjacency_matrix.col_indices, 500);
+    dynarr8_expand(&undirected_graph.adjacency_matrix.row_indices, 300);
     assert(undirected_graph.adjacency_matrix.col_indices.capacity == 500, "Incorrect matrix cols size");
     assert(undirected_graph.adjacency_matrix.row_indices.capacity == 300, "Incorrect matrix rows size");
 
-    dynarr_u64_expand(&directed_graph.adjacency_matrix.col_indices, 500);
-    dynarr_u64_expand(&directed_graph.adjacency_matrix.row_indices, 300);
+    dynarr8_expand(&directed_graph.adjacency_matrix.col_indices, 500);
+    dynarr8_expand(&directed_graph.adjacency_matrix.row_indices, 300);
     assert(directed_graph.adjacency_matrix.col_indices.capacity == 500, "Incorrect matrix cols size");
     assert(directed_graph.adjacency_matrix.row_indices.capacity == 300, "Incorrect matrix rows size");
 
@@ -929,70 +937,70 @@ static TEST_RESULT test_gphrx_add_vertex()
     assert(undirected_graph.adjacency_matrix.col_indices.size == 16, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 16, "Incorrect adjacency matrix");
     
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 0) == 1,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 0).u64_val == 1,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 1) == 2,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 1).u64_val == 2,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 2) == 3,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 2).u64_val == 3,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 3) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 3).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 4) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 4).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 5) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 5).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 6) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 6).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 7) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 7).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 8) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 8).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 9) == 9,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 9).u64_val == 9,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 10) == 20,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 10).u64_val == 20,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 11) == 100,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 11).u64_val == 100,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 12) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 12).u64_val == 500,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 13) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 13).u64_val == 500,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 14) == 1000,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 14).u64_val == 1000,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 15) == 1001,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 15).u64_val == 1001,
            "Incorrect adjacency matrix");
 
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 0) == 1000,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 0).u64_val == 1000,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 1) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 1).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 2) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 2).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 3) == 2,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 3).u64_val == 2,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 4) == 3,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 4).u64_val == 3,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 5) == 9,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 5).u64_val == 9,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 6) == 20,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 6).u64_val == 20,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 7) == 100,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 7).u64_val == 100,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 8) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 8).u64_val == 500,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 9) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 9).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 10) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 10).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 11) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 11).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 12) == 7,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 12).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 13) == 1001,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 13).u64_val == 1001,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 14) == 1,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 14).u64_val == 1,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 15) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 15).u64_val == 500,
            "Incorrect adjacency matrix");
     
     GphrxGraph directed_graph = new_directed_gphrx();
@@ -1006,38 +1014,38 @@ static TEST_RESULT test_gphrx_add_vertex()
     assert(directed_graph.adjacency_matrix.col_indices.size == 8, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 8, "Incorrect adjacency matrix");
     
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 0) == 1,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 0).u64_val == 1,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 1) == 7,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 1).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 2) == 7,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 2).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 3) == 7,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 3).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 4) == 7,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 4).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 5) == 7,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 5).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 6) == 500,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 6).u64_val == 500,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 7) == 500,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 7).u64_val == 500,
            "Incorrect adjacency matrix");
   
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 0) == 1000,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 0).u64_val == 1000,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 1) == 2,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 1).u64_val == 2,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 2) == 3,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 2).u64_val == 3,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 3) == 9,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 3).u64_val == 9,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 4) == 20,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 4).u64_val == 20,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 5) == 100,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 5).u64_val == 100,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 6) == 7,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 6).u64_val == 7,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 7) == 1001,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 7).u64_val == 1001,
            "Incorrect adjacency matrix");
 
     free_gphrx(&undirected_graph);
@@ -1067,22 +1075,22 @@ static TEST_RESULT test_gphrx_remove_vertex()
     assert(undirected_graph.adjacency_matrix.col_indices.size == 4, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 4, "Incorrect adjacency matrix");
     
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 0) == 1,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 0).u64_val == 1,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 1) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 1).u64_val == 500,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 2) == 1000,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 2).u64_val == 1000,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 3) == 1001,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 3).u64_val == 1001,
            "Incorrect adjacency matrix");
 
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 0) == 1000,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 0).u64_val == 1000,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 1) == 1001,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 1).u64_val == 1001,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 2) == 1,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 2).u64_val == 1,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 3) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 3).u64_val == 500,
            "Incorrect adjacency matrix");
     
     gphrx_remove_vertex(&undirected_graph, 1000);
@@ -1091,14 +1099,14 @@ static TEST_RESULT test_gphrx_remove_vertex()
     assert(undirected_graph.adjacency_matrix.col_indices.size == 2, "Incorrect adjacency matrix");
     assert(undirected_graph.adjacency_matrix.row_indices.size == 2, "Incorrect adjacency matrix");
 
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 0) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 0).u64_val == 500,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 1) == 1001,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 1).u64_val == 1001,
            "Incorrect adjacency matrix");
 
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 0) == 1001,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 0).u64_val == 1001,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 1) == 500,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 1).u64_val == 500,
            "Incorrect adjacency matrix");
 
     gphrx_remove_vertex(&undirected_graph, 1001);
@@ -1124,14 +1132,14 @@ static TEST_RESULT test_gphrx_remove_vertex()
     assert(directed_graph.adjacency_matrix.col_indices.size == 2, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 2, "Incorrect adjacency matrix");
     
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 0) == 1,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 0).u64_val == 1,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 1) == 500,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 1).u64_val == 500,
            "Incorrect adjacency matrix");
 
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 0) == 1000,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 0).u64_val == 1000,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 1) == 1001,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 1).u64_val == 1001,
            "Incorrect adjacency matrix");
 
     gphrx_remove_vertex(&directed_graph, 1000);
@@ -1140,10 +1148,10 @@ static TEST_RESULT test_gphrx_remove_vertex()
     assert(directed_graph.adjacency_matrix.col_indices.size == 1, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 1, "Incorrect adjacency matrix");
 
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 0) == 500,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 0).u64_val == 500,
            "Incorrect adjacency matrix");
 
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 0) == 1001,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 0).u64_val == 1001,
            "Incorrect adjacency matrix");
 
     gphrx_remove_vertex(&directed_graph, 500);
@@ -1203,42 +1211,42 @@ static TEST_RESULT test_gphrx_add_edge()
     assert(directed_graph.adjacency_matrix.col_indices.size == 1, "Incorrect adjacency matrix");
     assert(directed_graph.adjacency_matrix.row_indices.size == 1, "Incorrect adjacency matrix");
     
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 0) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 0).u64_val == 5,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 1) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 1).u64_val == 5,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 2) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 2).u64_val == 5,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 3) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 3).u64_val == 5,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 4) == 97,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 4).u64_val == 97,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 5) == 98,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 5).u64_val == 98,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 6) == 99,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 6).u64_val == 99,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.col_indices, 7) == 100,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.col_indices, 7).u64_val == 100,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 0) == 97,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 0).u64_val == 97,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 1) == 98,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 1).u64_val == 98,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 2) == 99,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 2).u64_val == 99,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 3) == 100,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 3).u64_val == 100,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 4) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 4).u64_val == 5,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 5) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 5).u64_val == 5,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 6) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 6).u64_val == 5,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&undirected_graph.adjacency_matrix.row_indices, 7) == 5,
+    assert(dynarr8_get(&undirected_graph.adjacency_matrix.row_indices, 7).u64_val == 5,
            "Incorrect adjacency matrix");
     
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.col_indices, 0) == 9,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.col_indices, 0).u64_val == 9,
            "Incorrect adjacency matrix");
-    assert(dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, 0) == 1001,
+    assert(dynarr8_get(&directed_graph.adjacency_matrix.row_indices, 0).u64_val == 1001,
            "Incorrect adjacency matrix");
 
     free_gphrx(&undirected_graph);
@@ -1306,11 +1314,11 @@ static TEST_RESULT test_gphrx_remove_edge()
     bool found_val_after = false;
     for (size_t i = 0; i < directed_graph.adjacency_matrix.row_indices.size; ++i)
     {
-        if (dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, i) == 998)
+        if (dynarr8_get(&directed_graph.adjacency_matrix.row_indices, i).u64_val == 998)
             found_val = true;
-        if (dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, i) == 997)
+        if (dynarr8_get(&directed_graph.adjacency_matrix.row_indices, i).u64_val == 997)
             found_val_before = true;
-        if (dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, i) == 999)
+        if (dynarr8_get(&directed_graph.adjacency_matrix.row_indices, i).u64_val == 999)
             found_val_after = true;
     }
 
@@ -1330,11 +1338,11 @@ static TEST_RESULT test_gphrx_remove_edge()
     found_val_after = false;
     for (size_t i = 0; i < directed_graph.adjacency_matrix.row_indices.size; ++i)
     {
-        if (dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, i) == 996)
+        if (dynarr8_get(&directed_graph.adjacency_matrix.row_indices, i).u64_val == 996)
             found_val = true;
-        if (dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, i) == 995)
+        if (dynarr8_get(&directed_graph.adjacency_matrix.row_indices, i).u64_val == 995)
             found_val_before = true;
-        if (dynarr_u64_get(&directed_graph.adjacency_matrix.row_indices, i) == 997)
+        if (dynarr8_get(&directed_graph.adjacency_matrix.row_indices, i).u64_val == 997)
             found_val_after = true;
     }
 
@@ -1364,20 +1372,20 @@ static TEST_RESULT test_gphrx_find_occurrence_proportion_matrix()
     assert(occurrence_matrix.col_indices.size == 4, "Incorrect occurrence matrix");
     assert(occurrence_matrix.row_indices.size == 4, "Incorrect occurrence matrix");
     
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 0) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 1) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 2) == 1, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 3) == 1, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 0).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 1).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 2).u64_val == 1, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 3).u64_val == 1, "Incorrect occurrence matrix");
 
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 0) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 1) == 1, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 2) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 3) == 1, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 0).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 1).u64_val == 1, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 2).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 3).u64_val == 1, "Incorrect occurrence matrix");
 
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 0) * 100) == 16, "Incorrect occurrence matrix");
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 1) * 100) == 4, "Incorrect occurrence matrix");
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 2) * 100) == 16, "Incorrect occurrence matrix");
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 3) * 100) == 16, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 0).dbl_val * 100) == 16, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 1).dbl_val * 100) == 4, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 2).dbl_val * 100) == 16, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 3).dbl_val * 100) == 16, "Incorrect occurrence matrix");
     
     free_gphrx_csr_matrix(&occurrence_matrix);
     free_gphrx(&undirected_graph);
@@ -1400,23 +1408,23 @@ static TEST_RESULT test_gphrx_find_occurrence_proportion_matrix()
     assert(occurrence_matrix.col_indices.size == 5, "Incorrect occurrence matrix");
     assert(occurrence_matrix.row_indices.size == 5, "Incorrect occurrence matrix");
     
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 0) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 1) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 2) == 1, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 3) == 1, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.col_indices, 4) == 2, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 0).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 1).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 2).u64_val == 1, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 3).u64_val == 1, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.col_indices, 4).u64_val == 2, "Incorrect occurrence matrix");
 
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 0) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 1) == 2, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 2) == 0, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 3) == 1, "Incorrect occurrence matrix");
-    assert(dynarr_u64_get(&occurrence_matrix.row_indices, 4) == 2, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 0).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 1).u64_val == 2, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 2).u64_val == 0, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 3).u64_val == 1, "Incorrect occurrence matrix");
+    assert(dynarr8_get(&occurrence_matrix.row_indices, 4).u64_val == 2, "Incorrect occurrence matrix");
 
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 0) * 100) == 44, "Incorrect occurrence matrix");
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 1) * 100) == 11, "Incorrect occurrence matrix");
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 2) * 100) == 22, "Incorrect occurrence matrix");
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 3) * 100) == 11, "Incorrect occurrence matrix");
-    assert((int) (dynarr_dbl_get(&occurrence_matrix.entries, 4) * 100) == 11, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 0).dbl_val * 100) == 44, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 1).dbl_val * 100) == 11, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 2).dbl_val * 100) == 22, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 3).dbl_val * 100) == 11, "Incorrect occurrence matrix");
+    assert((int) (dynarr8_get(&occurrence_matrix.entries, 4).dbl_val * 100) == 11, "Incorrect occurrence matrix");
 
     free_gphrx_csr_matrix(&occurrence_matrix);
     free_gphrx(&directed_graph);

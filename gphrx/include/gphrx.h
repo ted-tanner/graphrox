@@ -48,8 +48,8 @@ typedef struct {
  */
 typedef struct {
     u64 dimension;
-    DynamicArrayU64 col_indices;
-    DynamicArrayU64 row_indices;
+    DynamicArray8 col_indices;
+    DynamicArray8 row_indices;
 } GphrxCsrAdjacencyMatrix;
 
 /**
@@ -58,8 +58,8 @@ typedef struct {
 typedef struct {
     u64 dimension;
     DynamicArrayDouble entries;
-    DynamicArrayU64 col_indices;
-    DynamicArrayU64 row_indices; 
+    DynamicArray8 col_indices;
+    DynamicArray8 row_indices; 
 } GphrxCsrMatrix;
 
 /**
