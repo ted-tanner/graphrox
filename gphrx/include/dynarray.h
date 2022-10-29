@@ -7,38 +7,38 @@
 #include "assert.h"
 #include "intrinsics.h"
 
-// 8-byte value array
 typedef union {
     u64 u64_val;
-    double double_val;
-} byteval8;
+    double dbl_val;
+} Byte8Val;
 
 typedef struct {
     size_t capacity;
     size_t size;
-    byteval8 *arr;
+    Byte8Val *arr;
 } DynamicArray8;
 
 // 16-byte value array
 typedef struct {
     u64 u64_val;
-    double double_val;
+    double dbl_val;
 } Tuple_u64_double;
 
 typedef union {
     Tuple_u64_double tuple_val;
-} byteval16;
+} Byte16Val;
 
 typedef struct {
     size_t capacity;
     size_t size;
-    byteval16 *arr;
+    Byte16Val *arr;
 } DynamicArray16;
 
-/** 8-byte value array */
+
+/** Byte8Val */
 #define new_dynarr8() new_dynarr8_with_capacity(1)
 #define free_dynarr8(arr_ptr) free((arr_ptr)->arr)
-
+ 
 #define dynarr8_push(arr_ptr, item) _dynarr8_push_at((arr_ptr), item, (arr_ptr)->size)
 #define dynarr8_push_at(arr_ptr, item, idx) _dynarr8_push_at((arr_ptr), item, (idx))
 
@@ -52,11 +52,11 @@ void dynarr8_shrink(DynamicArray8 *arr);
 void dynarr8_expand(DynamicArray8 *arr, size_t desired_capacity);
 void dynarr8_grow_and_zero(DynamicArray8 *arr, size_t desired_size);
 
-void dynarr8_push_multiple(DynamicArray8 *arr, byteval8 *item_arr, size_t count);
+void dynarr8_push_multiple(DynamicArray8 *arr, Byte8Val *item_arr, size_t count);
 void dynarr8_remove_at(DynamicArray8 *arr, size_t idx);
 void dynarr8_remove_multiple_at(DynamicArray8 *arr, size_t start_idx, size_t count);
 
-void _dynarr8_push_at(DynamicArray8 *arr, byteval8 item, size_t idx);
+void _dynarr8_push_at(DynamicArray8 *arr, Byte8Val item, size_t idx);
 
 /** 16-byte value array */
 #define new_dynarr16() new_dynarr16_with_capacity(1)
@@ -75,11 +75,11 @@ void dynarr16_shrink(DynamicArray16 *arr);
 void dynarr16_expand(DynamicArray16 *arr, size_t desired_capacity);
 void dynarr16_grow_and_zero(DynamicArray16 *arr, size_t desired_size);
 
-void dynarr16_push_multiple(DynamicArray16 *arr, byteval16 *item_arr, size_t count);
+void dynarr16_push_multiple(DynamicArray16 *arr, Byte16Val *item_arr, size_t count);
 void dynarr16_remove_at(DynamicArray16 *arr, size_t idx);
 void dynarr16_remove_multiple_at(DynamicArray16 *arr, size_t start_idx, size_t count);
 
-void _dynarr16_push_at(DynamicArray16 *arr, byteval16 item, size_t idx);
+void _dynarr16_push_at(DynamicArray16 *arr, Byte16Val item, size_t idx);
 
 #ifdef TEST_MODE
 
