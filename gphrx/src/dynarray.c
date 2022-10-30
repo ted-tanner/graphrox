@@ -727,6 +727,10 @@ static TEST_RESULT test_dynarr16_get() {
     Byte16Val val2 = { .tuple_val = tuple2 };
     Byte16Val val3 = { .tuple_val = tuple3 };
 
+    dynarr16_push(&arr, val1);
+    dynarr16_push(&arr, val2);
+    dynarr16_push(&arr, val3);
+
     assert(dynarr16_get(&arr, 0).tuple_val.u64_val == val1.tuple_val.u64_val, "Incorrect value in array");
     assert(dynarr16_get(&arr, 0).tuple_val.dbl_val == val1.tuple_val.dbl_val, "Incorrect value in array");
     assert(dynarr16_get(&arr, 1).tuple_val.u64_val == val2.tuple_val.u64_val, "Incorrect value in array");
@@ -812,13 +816,13 @@ static TEST_RESULT test_dynarr16_pop() {
 
     curr = dynarr16_pop(&arr).tuple_val;
     assert(arr.size == 1, "Incorrect array size");
-    assert(curr.u64_val == val3.tuple_val.u64_val, "Incorrect value in array");
-    assert(curr.dbl_val == val3.tuple_val.dbl_val, "Incorrect value in array");
+    assert(curr.u64_val == val2.tuple_val.u64_val, "Incorrect value in array");
+    assert(curr.dbl_val == val2.tuple_val.dbl_val, "Incorrect value in array");
     
     curr = dynarr16_pop(&arr).tuple_val;
     assert(arr.size == 0, "Incorrect array size");
-    assert(curr.u64_val == val3.tuple_val.u64_val, "Incorrect value in array");
-    assert(curr.dbl_val == val3.tuple_val.dbl_val, "Incorrect value in array");
+    assert(curr.u64_val == val1.tuple_val.u64_val, "Incorrect value in array");
+    assert(curr.dbl_val == val1.tuple_val.dbl_val, "Incorrect value in array");
 
     free_dynarr16(&arr);
 
