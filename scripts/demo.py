@@ -24,16 +24,16 @@ if __name__ == '__main__':
     print(graph.adjacency_matrix)
     print()
 
-    print("2x2-block Occurrence Proportion Matrix")
-    print(graph.find_occurrence_proportion_matrix(2))
+    print("2x2-block Average Pool Matrix")
+    print(graph.find_avg_pool_matrix(2))
     print()
 
     print("Approximation using 2x2 blocks and a threshold of 0.3")
     print(graph.approximate(2, 0.3).adjacency_matrix)
     print()
 
-    print("3x3-block Occurrence Proportion Matrix")
-    print(graph.find_occurrence_proportion_matrix(3))
+    print("3x3-block Average Pool Matrix")
+    print(graph.find_avg_pool_matrix(3))
     print()
 
     print("Approximation using 3x3 blocks and a threshold of 0.2")

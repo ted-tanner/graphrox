@@ -41,8 +41,10 @@ typedef struct {
     u8 is_weighted;
 } GphrxByteArrayHeader;
 
-// TODO: These matricies should really be hash tables so we don't have to perform a log(n) search to find anything. Hash the column index and use a list of row indices (along with entries for a weighted graph) as the value. We can perform a binary search on the row indices because that search will be much smaller.
-// TODO: Once the hash table are in place, it will be feasible to use a weighted matrix for the occurrence matrix when generating the occurrence proportion matrix
+// TODO: These matricies should really be hash tables so we don't have to perform a log(n)
+//       search to find anything. Hash the column index and use a list of row indices (along
+//       with entries for a weighted graph) as the value. We can perform a binary search on
+//       the row indices because that search will be much smaller.
 /**
  * Compress Space Row formatted adjacency matrix stored with dynamic arrays.
  */
@@ -70,6 +72,14 @@ typedef struct {
     GphrxCsrAdjacencyMatrix adjacency_matrix;
 } GphrxGraph;
 
+/**
+ * Metadata and representation of a compressed graph.
+ */
+typedef struct {
+    bool is_undirected;
+    u64 dimension;
+    GphrxCsrAdjacencyMatrix adjacency_matrix;
+} GphrxCompressedGraph;
 
 /**
  * Creates an empty undirected GraphRox graph.
@@ -146,11 +156,11 @@ DLLEXPORT void gphrx_add_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u6
 DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_vertex_id, u64 to_vertex_id);
 
 /**
- * Returns an occurrence proportion matrix for a given graph given a block dimension. The block_dimension
+ * Returns an avg pool matrix for a given graph given a block dimension. The block_dimension
  * parameter determines the size of the blocks the graph's adjacency matrix will be split into to generate
  * the matrix. See the documentation for the approximate_gphrx function for more information.
  */
-DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *restrict graph, u64 block_dimension);
+DLLEXPORT GphrxCsrMatrix gphrx_find_avg_pool_matrix(GphrxGraph *restrict graph, u64 block_dimension);
 
 /**
  * Generates an approximation of a graph. This is where the magic of GraphRox happens.
@@ -168,9 +178,28 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *res
 DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dimension, double threshold);
 
 /**
+ * Compresses a matrix by average pooling 8x8 blocks in a graph's adjacency matrix, applying a threshold
+ * (blocks that fall below the threshold will be dropped in the compression, meaning those blocks in the
+ * resulting compressed graph's adjacency matrix will be filled with zeros and therefore not represented
+ * in edge lists), then representing entries in each 8x8 block with an unsigned 64-bit integer, with a
+ * single bit representing a single edge in the block.
+ */
+DLLEXPORT GphrxCompressedGraph gphrx_compress_lossy(GphrxGraph *restrict graph, double threshold);
+
+/**
+ * Converts a GrphxGraph
+ */
+DLLEXPORT GphrxGraph gphrx_decompress(GphrxCompressedGraph *restrict graph);
+
+/**
  * Converts the given GphrxGraph to a big-endian byte array representation.
  */
 DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *restrict graph);
+
+/**
+ * Converts the given GphrxCompressedGraph to a big-endian byte array representation.
+ */
+DLLEXPORT byte *gphrx_compressed_to_byte_array(GphrxCompressedGraph *restrict graph);
 
 /**
  * Converts the given byte array from big-endian byte array representation of a GphrxGraph to a GphrxGraph.
@@ -178,9 +207,16 @@ DLLEXPORT byte *gphrx_to_byte_array(GphrxGraph *restrict graph);
 DLLEXPORT GphrxGraph gphrx_from_byte_array(byte *restrict arr, GphrxErrorCode *restrict error);
 
 /**
+ * Converts the given byte array from big-endian byte array representation of a GphrxCompressedGraph to a
+ * GphrxCompressedGraph.
+ */
+DLLEXPORT GphrxCompressedGraph gphrx_compressed_from_byte_array(byte *restrict arr, GphrxErrorCode *restrict error);
+
+/**
  * Calls the C standard library `free()` on the provided pointer. This function is only intended for use by
  * foreign function interfaces for other languages importing GraphRox as a dynamic link library so they can
- * free memory allocated for byte arrays created by the `gphrx_from_byte_array()` function.
+ * free memory allocated for byte arrays created by the `gphrx_from_byte_array()` or
+ * `gphrx_compressed_from_byte_array()` functions.
  */
 DLLEXPORT void free_gphrx_byte_array(void *restrict arr);
 

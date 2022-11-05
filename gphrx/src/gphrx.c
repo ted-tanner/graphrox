@@ -392,7 +392,9 @@ DLLEXPORT GphrxErrorCode gphrx_remove_edge(GphrxGraph *restrict graph, u64 from_
     return GPHRX_NO_ERROR;
 }
 
-DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *restrict graph, u64 block_dimension)
+// TODO: This allocates a block the size of the entire adjacency matrix for the approximated graph.
+//       It doesn't need to.
+DLLEXPORT GphrxCsrMatrix gphrx_find_avg_pool_matrix(GphrxGraph *restrict graph, u64 block_dimension)
 {
     if (block_dimension < 1)
         block_dimension = 1;
@@ -407,7 +409,7 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *res
     u64 blocks_per_row = (vertex_count / block_dimension) + (are_edge_blocks_padded ? 1 : 0);
     u64 block_count = blocks_per_row * blocks_per_row;
 
-    u64 *restrict occurrences = calloc(block_count, sizeof(u64));
+    u64 occurrences = calloc(block_count, sizeof(u64));
 
     for (size_t i = 0; i < graph->adjacency_matrix.col_indices.size; ++i)
     {
@@ -474,7 +476,7 @@ DLLEXPORT GphrxGraph approximate_gphrx(GphrxGraph *restrict graph, u64 block_dim
     else if (threshold <= 0.0f)
         threshold = 0.00000001f;
 
-    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_proportion_matrix(graph, block_dimension);
+    GphrxCsrMatrix occurrence_matrix = gphrx_find_avg_pool_matrix(graph, block_dimension);
 
     GphrxCsrAdjacencyMatrix approx_adj_matrix = {
         .dimension = occurrence_matrix.dimension,
@@ -814,7 +816,7 @@ static TEST_RESULT test_gphrx_csr_matrix_to_string()
     gphrx_add_edge(&undirected_graph, 0, 6);
     gphrx_add_edge(&undirected_graph, 6, 6);
     
-    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_proportion_matrix(&undirected_graph, 3);
+    GphrxCsrMatrix occurrence_matrix = gphrx_find_avg_pool_matrix(&undirected_graph, 3);
     char *occurrence_matrix_str = gphrx_csr_matrix_to_string(&occurrence_matrix, 3);
 
     char *expected_str = "[ 0.778, 0.222, 0.111 ]\r\n[ 0.222, 0.222, 0.000 ]\r\n[ 0.111, 0.000, 0.111 ]";
@@ -1355,7 +1357,7 @@ static TEST_RESULT test_gphrx_remove_edge()
 }
 
 
-static TEST_RESULT test_gphrx_find_occurrence_proportion_matrix()
+static TEST_RESULT test_gphrx_find_avg_pool_matrix()
 {
     u64 to_edges_1[] = {0, 2, 4, 7, 3};
     u64 to_edges_5[] = {6, 8, 0, 1, 5, 4, 2};
@@ -1366,7 +1368,7 @@ static TEST_RESULT test_gphrx_find_occurrence_proportion_matrix()
     gphrx_add_vertex(&undirected_graph, 1, to_edges_1, 5);
     gphrx_add_vertex(&undirected_graph, 5, to_edges_5, 7);
     
-    GphrxCsrMatrix occurrence_matrix = gphrx_find_occurrence_proportion_matrix(&undirected_graph, 5);
+    GphrxCsrMatrix occurrence_matrix = gphrx_find_avg_pool_matrix(&undirected_graph, 5);
 
     assert(occurrence_matrix.entries.size == 4, "Incorrect occurrence matrix");
     assert(occurrence_matrix.col_indices.size == 4, "Incorrect occurrence matrix");
@@ -1402,7 +1404,7 @@ static TEST_RESULT test_gphrx_find_occurrence_proportion_matrix()
     gphrx_add_edge(&directed_graph, 0, 6);
     gphrx_add_edge(&directed_graph, 6, 6);
     
-    occurrence_matrix = gphrx_find_occurrence_proportion_matrix(&directed_graph, 3);
+    occurrence_matrix = gphrx_find_avg_pool_matrix(&directed_graph, 3);
         
     assert(occurrence_matrix.entries.size == 5, "Incorrect occurrence matrix");
     assert(occurrence_matrix.col_indices.size == 5, "Incorrect occurrence matrix");
@@ -1625,7 +1627,7 @@ ModuleTestSet gphrx_h_register_tests()
     register_test(&set, test_gphrx_remove_vertex);
     register_test(&set, test_gphrx_add_edge);
     register_test(&set, test_gphrx_remove_edge);
-    register_test(&set, test_gphrx_find_occurrence_proportion_matrix);
+    register_test(&set, test_gphrx_find_avg_pool_matrix);
     register_test(&set, test_approximate_gphrx);
     register_test(&set, test_gphrx_to_from_byte_array);
 
