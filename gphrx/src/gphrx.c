@@ -406,35 +406,34 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *res
     
     u64 blocks_per_row = (vertex_count / block_dimension) + (are_edge_blocks_padded ? 1 : 0);
     u64 block_count = blocks_per_row * blocks_per_row;
-
-    u64 *restrict occurrences = calloc(block_count, sizeof(u64));
-
-    for (size_t i = 0; i < graph->adjacency_matrix.col_indices.size; ++i)
-    {
-        u64 col = dynarr8_get(&graph->adjacency_matrix.col_indices, i).u64_val;
-        u64 row = dynarr8_get(&graph->adjacency_matrix.row_indices, i).u64_val;
-
-        u64 col_pos = col / block_dimension;
-        u64 row_pos = row / block_dimension;
-
-        size_t occurrences_pos = row_pos * blocks_per_row + col_pos;
-        ++occurrences[occurrences_pos];
-    }
-
+    
     GphrxCsrMatrix occurrence_matrix = {
         .dimension = blocks_per_row,
         .entries = new_dynarr8_with_capacity(block_count),
         .col_indices = new_dynarr8_with_capacity(block_count),
         .row_indices = new_dynarr8_with_capacity(block_count),
     };
-    
+
     double block_size = block_dimension * block_dimension;
     for (size_t col = 0; col < blocks_per_row; ++col)
-    {
+    {        
         for (size_t row = 0; row < blocks_per_row; ++row)
         {
+            u64 occurrences_in_block = 0;
+
+            u64 block_col_idx = col * block_dimension;
+            u64 block_row_idx = row * block_dimension;
+            for (size_t block_col = block_col_idx; block_col < block_col_idx + block_dimension; ++block_col)
+            {
+                for (size_t block_row = block_row_idx; block_row < block_row_idx + block_dimension; ++block_row)
+                {
+                    if (gphrx_does_edge_exist(graph, block_col, block_row))
+                        ++occurrences_in_block;
+                }
+            }
+            
             size_t row_start = row * blocks_per_row;
-            double entry = occurrences[row_start + col] / (double) block_size;
+            double entry = occurrences_in_block / (double) block_size;
 
             if (entry != 0.0)
             {
@@ -448,8 +447,6 @@ DLLEXPORT GphrxCsrMatrix gphrx_find_occurrence_proportion_matrix(GphrxGraph *res
             }
         }
     }
-
-    free(occurrences);
 
     return occurrence_matrix;
 }
